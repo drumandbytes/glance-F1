@@ -10,7 +10,7 @@ import hashlib
 import json
 from fastapi_cache import FastAPICache
 
-from .map_generator import generate_track_map_svg, remove_accents
+from .map_generator import generate_track_map_svg, normalize_name
 from ..helpers.global_vars import NEXT_RACE_API_URL, default_expire
 from ..helpers.time_functions import MT
 
@@ -47,6 +47,8 @@ def generate_historical_track_map(data):
             attempts.append({
                 "year": year,
                 "race_name": event.get("EventName"),
+                "city": city,
+                "country": country,
                 "track": track,
                 "session_type": "Q",
             })
@@ -74,9 +76,6 @@ def generate_historical_track_map(data):
                 errors.append(f"{year}: {type(e).__name__}: {e}")
 
     raise ValueError("Could not fetch a historical track map. " + " | ".join(errors[-6:]))
-
-def normalize_name(value):
-    return remove_accents(str(value or "")).casefold().strip()
 
 def historical_event_matches(event, city, country, race_name):
     location_matches = city and normalize_name(event.get("Location")) == normalize_name(city)

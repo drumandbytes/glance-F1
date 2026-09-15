@@ -11,6 +11,9 @@ def remove_accents(input_str):
     nfkd_form = unicodedata.normalize('NFKD', input_str)
     return u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
 
+def normalize_name(value):
+    return remove_accents(str(value or "")).casefold().strip()
+
 def generate_track_map_svg(year: int, city: str = None, country: str = None, track: str = None, session_type: str = "Q", race_name: str = None) -> str:
     track_color = os.environ['TRACK_COLOUR'].strip()
 
@@ -33,8 +36,11 @@ def generate_track_map_svg(year: int, city: str = None, country: str = None, tra
     #if (gp == "Silverstone Great Britain"):
     #    gp = "Silverstone United Kingdom"
 
-    if not race_name: 
-        if (city != remove_accents(session.event.Location)) or (country != remove_accents(session.event.Country)):
+    # Validate whenever we have an expected location to check against, not just
+    # on the city+country lookup path - fastf1 fuzzy-matches `gp` when it's a
+    # race name, and can silently resolve to the wrong event for that year.
+    if city and country:
+        if (normalize_name(city) != normalize_name(session.event.Location)) or (normalize_name(country) != normalize_name(session.event.Country)):
             raise ValueError("Map not matching correctly")
 
     # I hate this API, please let me load just one drivers telemetry not everything...

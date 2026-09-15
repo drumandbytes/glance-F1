@@ -1,0 +1,36 @@
+name: Build and publish image
+
+# Builds our patched fork while the upstream PR is pending, so the fix can be
+# deployed without waiting on skyallinott/f1_api:latest to be rebuilt.
+on:
+  push:
+    branches:
+      - fix/historical-map-location-validation
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: date
+        run: echo "tag=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: API
+          push: true
+          tags: |
+            ghcr.io/drumandbytes/f1_api:${{ steps.date.outputs.tag }}
+            ghcr.io/drumandbytes/f1_api:latest
