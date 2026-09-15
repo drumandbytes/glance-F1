@@ -4,9 +4,8 @@ name: Build and publish image
 # deployed without waiting on skyallinott/f1_api:latest to be rebuilt.
 on:
   push:
-    branches:
-      - fix/historical-map-location-validation
-  workflow_dispatch:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
   build:
@@ -18,8 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - id: date
-        run: echo "tag=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
+      - id: version
+        run: echo "tag=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/login-action@v3
         with:
@@ -32,5 +31,5 @@ jobs:
           context: API
           push: true
           tags: |
-            ghcr.io/drumandbytes/f1_api:${{ steps.date.outputs.tag }}
+            ghcr.io/drumandbytes/f1_api:${{ steps.version.outputs.tag }}
             ghcr.io/drumandbytes/f1_api:latest
