@@ -9,6 +9,7 @@ import os
 
 from .helpers.time_functions import TZ, MT, UTC, convert_to_mt, get_datetime
 from .helpers.global_vars import default_expire
+from .map.map_generator import normalize_name
 
 router = APIRouter()
 
@@ -75,16 +76,33 @@ async def get_next_race():
     # Clean up race name
     year = calendar_data.get("season")
     calendar_round = next_race.get("round")
+    circuit = next_race.get("circuit", {}) or {}
 
-    # Handle issues in 2026 calendar due to race cancellations
-    if year == 2026 and calendar_round >= 6:
-        calendar_round = calendar_round - 2
+    # f1api.dev's round numbers include cancelled races (see the `i in (4, 5)`
+    # skip above) while fastf1's schedule drops and renumbers them, so a fixed
+    # round offset (previously a hardcoded "-2" for 2026) drifts out of sync
+    # whenever the two diverge further. Resolve the event by circuit location
+    # instead, which doesn't depend on the two sources agreeing on round
+    # numbering at all.
+    event_details = None
+    try:
+        event_schedule = fastf1.get_event_schedule(year)
+        matches = event_schedule[
+            (event_schedule["Location"].apply(normalize_name) == normalize_name(circuit.get("city")))
+            & (event_schedule["Country"].apply(normalize_name) == normalize_name(circuit.get("country")))
+        ]
+        if not matches.empty:
+            event_details = matches.iloc[0]
+    except Exception:
+        event_details = None
 
-    event_details = fastf1.get_event(year = year, gp = calendar_round)
+    if event_details is None:
+        event_details = fastf1.get_event(year = year, gp = calendar_round)
+
     next_race["raceName"] = event_details.EventName
+    calendar_round = int(event_details.get("RoundNumber", calendar_round))
 
     # Circuit processing
-    circuit = next_race.get("circuit", {})
     if "circuitLength" in circuit:
         try:
             raw_length = int(circuit["circuitLength"].replace("km", "").strip())
