@@ -24,9 +24,17 @@ jobs:
        github.event.workflow_run.actor.login == 'dnb-robot[bot]')
     uses: drumandbytes/reusable-actions/.github/workflows/auto-merge.yml@v1
     with:
-      # Both unconditional: dependency bumps and regenerate-track-maps' own
-      # PRs (opened as dnb-robot). No release-please here, so there's no
-      # patch/minor/major distinction to gate on - patch-only-authors is
-      # specific to that.
-      allowed-authors: '["dependabot[bot]", "dnb-robot[bot]"]'
+      # dependabot[bot]'s dependency bumps: unconditional.
+      allowed-authors: '["dependabot[bot]"]'
+      # dnb-robot[bot] opens two different kinds of PR here now: release-please's
+      # own version-bump PR (patch/minor/major all possible - gate to patch
+      # only, same as eraser/music-router), and regenerate-track-maps' PR
+      # (never touches .release-please-manifest.json, so its version never
+      # changes base-to-head - trivially "a patch bump" every time, i.e.
+      # unconditional in practice, without needing its own allow-list entry).
+      patch-only-authors: '["dnb-robot[bot]"]'
+      # release-please's merge needs to cascade into another release-please
+      # run (to actually cut the tag) and publish.yml's tag-triggered build -
+      # neither happens from a GITHUB_TOKEN-authored merge.
+      use-app-token-for-merge: true
     secrets: inherit
