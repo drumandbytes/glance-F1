@@ -45,7 +45,7 @@ The 4 end points are:
 1. Next race. This features details such as circuit name, lap record holder, and countdown to the race.
 2. Driver championship. This cleans up the naming of each driver and adds a nice nationality flag for each driver.
 3. Constructors championship. Cleans up team names to a simplified form and adds home country flag for each team.
-4. Track map. This generates an SVG of the current track. It relies on positioning data from a prior years event at the same track.
+4. Track map. This generates an SVG of the current track, drawn from [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits)' static circuit geometry - no live session data required, so it works even for a circuit that hasn't hosted a race yet.
 
 ## Widgets
 I really enjoyed the theme and style of the community widgets by @abaza738, so I largely use their theming and design, I just change the underlying API to achieve more custom results.
