@@ -13,11 +13,19 @@ import os
 import sys
 from datetime import datetime
 
+import fastf1
 import httpx
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from API_Endpoints.map.router import generate_historical_track_map  # noqa: E402
+
+# fastf1's default INFO level logs every fetch/parse step per driver -
+# ~20 drivers x 24 circuits of "Loading data...", "Fetching...",
+# "Position data is incomplete!" noise, none of it actionable here. Real
+# failures still surface via the try/except below and the summary at the
+# end - that's the signal that actually matters in this script's output.
+fastf1.set_log_level("ERROR")
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "static", "track_maps")
 
@@ -37,17 +45,19 @@ def main():
         if not circuit_id:
             continue
 
+        print(f"{circuit_id}...", end=" ", flush=True)
         data = {"race": [race], "season": season}
         try:
             svg = generate_historical_track_map(data)
         except Exception as e:
+            print(f"FAILED: {type(e).__name__}: {e}")
             failures.append(f"{circuit_id}: {type(e).__name__}: {e}")
             continue
 
         out_path = os.path.join(OUTPUT_DIR, f"{circuit_id}.svg")
         with open(out_path, "w") as f:
             f.write(svg)
-        print(f"wrote {out_path}")
+        print(f"ok ({len(svg)} bytes)")
 
     if failures:
         print("\nFailed circuits (left as whatever was previously generated, if anything):")
