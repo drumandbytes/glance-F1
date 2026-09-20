@@ -9,6 +9,13 @@ on:
     - cron: "0 3 1 * *"
   workflow_dispatch: {}
 
+# Repo default is read-only (org policy) - this job is the one place that
+# needs to push a branch and open a PR, so grant it explicitly here rather
+# than loosening the repo-wide default.
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   regenerate:
     runs-on: ubuntu-latest
