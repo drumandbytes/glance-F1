@@ -5,13 +5,13 @@
 # The F1 Season... At A Glance
 
 ![README](https://img.shields.io/badge/Actively%20Maintained-Green)
-![README](https://img.shields.io/github/v/release/drumandbytes/glance-f1)
+![README](https://img.shields.io/github/v/release/drumandbytes/paddock-api)
 ![README](https://img.shields.io/docker/pulls/drumandbytes/f1_api)
-![README](https://img.shields.io/github/issues/drumandbytes/glance-f1)
+![README](https://img.shields.io/github/issues/drumandbytes/paddock-api)
 
 
-![README](https://img.shields.io/github/commit-activity/w/drumandbytes/glance-f1)
-![README](https://img.shields.io/github/commits-since/drumandbytes/glance-f1/latest)
+![README](https://img.shields.io/github/commit-activity/w/drumandbytes/paddock-api)
+![README](https://img.shields.io/github/commits-since/drumandbytes/paddock-api/latest)
 
 ___
 
@@ -85,7 +85,7 @@ The largest difference is localized time zones, track map, added track details, 
 
 # Project Structure
 ```
-glance-F1/
+paddock-api/
 ├── API/
 │   ├── main.py                    # FastAPI application entry point
 │   ├── requirements.txt           # Python dependencies
