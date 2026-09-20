@@ -51,7 +51,10 @@ def test_no_schedule_match_skips_year_without_a_live_lookup(monkeypatch):
     calls = []
 
     def fake_get_event_schedule(year):
-        if year == 2023:
+        # 2024 (the current season) and 2023 both have no matching event -
+        # walk-back now tries the current year first, so both must be
+        # covered to actually exercise the skip-without-a-live-lookup path.
+        if year in (2024, 2023):
             return _schedule_df([{"Location": "Unrelated", "Country": "Nowhere", "EventName": "Unrelated Grand Prix"}])
         return _schedule_df([{"Location": "Shanghai", "Country": "China", "EventName": "Chinese Grand Prix"}])
 
@@ -73,9 +76,106 @@ def test_no_schedule_match_skips_year_without_a_live_lookup(monkeypatch):
     svg = router_module.generate_historical_track_map(data)
 
     assert svg == "<svg>fake</svg>"
-    # 2023 had no matching event and must not have triggered a live lookup -
-    # exactly one call, for 2022 (the first year that actually matches), not
-    # one wasted guess per skipped year.
+    # 2024 and 2023 both had no matching event and must not have triggered a
+    # live lookup - exactly one call, for 2022 (the first year that actually
+    # matches), not one wasted guess per skipped year.
     assert len(calls) == 1
     assert calls[0]["year"] == 2022
     assert calls[0]["race_name"] == "Chinese Grand Prix"
+
+
+def test_current_season_race_already_run_needs_no_walk_back(monkeypatch):
+    # Track layouts don't change year to year, but a circuit whose race
+    # already happened this season has its own data sitting right there -
+    # confirms the walk-back tries the current season first rather than
+    # skipping straight past it into history for no reason.
+    calls = []
+
+    def fake_get_event_schedule(year):
+        return _schedule_df([{"Location": "Shanghai", "Country": "China", "EventName": "Chinese Grand Prix"}])
+
+    def fake_generate_track_map_svg(**kwargs):
+        calls.append(kwargs)
+        return "<svg>fake</svg>"
+
+    monkeypatch.setattr(router_module.fastf1, "get_event_schedule", fake_get_event_schedule)
+    monkeypatch.setattr(router_module, "generate_track_map_svg", fake_generate_track_map_svg)
+
+    data = {
+        "race": [{
+            "raceName": "Chinese Grand Prix",
+            "circuit": {"city": "Shanghai", "country": "China", "circuitName": "Shanghai International Circuit"},
+        }],
+        "season": 2024,
+    }
+
+    router_module.generate_historical_track_map(data)
+
+    assert len(calls) == 1
+    assert calls[0]["year"] == 2024
+
+
+def test_current_season_falls_back_to_fp1_before_quali_happens(monkeypatch):
+    # A brand-new circuit's debut weekend has no history to fall back to at
+    # all - FP1 usually runs before qualifying, so try it too within the
+    # current season rather than waiting on Q alone.
+    calls = []
+
+    def fake_get_event_schedule(year):
+        return _schedule_df([{"Location": "Shanghai", "Country": "China", "EventName": "Chinese Grand Prix"}])
+
+    def fake_generate_track_map_svg(**kwargs):
+        calls.append(kwargs)
+        if kwargs["session_type"] == "Q":
+            raise ValueError("qualifying hasn't happened yet")
+        return "<svg>fp1</svg>"
+
+    monkeypatch.setattr(router_module.fastf1, "get_event_schedule", fake_get_event_schedule)
+    monkeypatch.setattr(router_module, "generate_track_map_svg", fake_generate_track_map_svg)
+
+    data = {
+        "race": [{
+            "raceName": "Chinese Grand Prix",
+            "circuit": {"city": "Shanghai", "country": "China", "circuitName": "Shanghai International Circuit"},
+        }],
+        "season": 2024,
+    }
+
+    svg = router_module.generate_historical_track_map(data)
+
+    assert svg == "<svg>fp1</svg>"
+    assert [c["session_type"] for c in calls] == ["Q", "FP1"]
+    assert all(c["year"] == 2024 for c in calls)
+
+
+def test_historical_years_never_try_fp1(monkeypatch):
+    calls = []
+
+    def fake_get_event_schedule(year):
+        return _schedule_df([{"Location": "Shanghai", "Country": "China", "EventName": "Chinese Grand Prix"}])
+
+    def fake_generate_track_map_svg(**kwargs):
+        calls.append(kwargs)
+        if kwargs["year"] == 2024:
+            raise ValueError("no data yet")
+        return "<svg>historical</svg>"
+
+    monkeypatch.setattr(router_module.fastf1, "get_event_schedule", fake_get_event_schedule)
+    monkeypatch.setattr(router_module, "generate_track_map_svg", fake_generate_track_map_svg)
+
+    data = {
+        "race": [{
+            "raceName": "Chinese Grand Prix",
+            "circuit": {"city": "Shanghai", "country": "China", "circuitName": "Shanghai International Circuit"},
+        }],
+        "season": 2024,
+    }
+
+    svg = router_module.generate_historical_track_map(data)
+
+    assert svg == "<svg>historical</svg>"
+    session_types_by_year = {}
+    for c in calls:
+        session_types_by_year.setdefault(c["year"], []).append(c["session_type"])
+    assert session_types_by_year[2024] == ["Q", "FP1"]
+    assert session_types_by_year[2023] == ["Q"]

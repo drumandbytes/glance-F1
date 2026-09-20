@@ -37,7 +37,14 @@ def generate_historical_track_map(data):
     current_year = int(data.get("season", datetime.now().year))
 
     errors = []
-    for year in range(current_year - 1, 2017, -1):
+    # Track layouts are static, so any year with recorded telemetry for this
+    # circuit produces an identical map - the walk-back isn't about
+    # freshness, it's the only way to get *any* data for a circuit whose
+    # race this season hasn't happened yet. But for one that already has
+    # (most of the calendar, most of the time this runs), this season's own
+    # data is sitting right there - try it first instead of walking straight
+    # past it into older, spottier seasons for no reason.
+    for year in range(current_year, 2017, -1):
         attempts = []
 
         try:
@@ -57,13 +64,21 @@ def generate_historical_track_map(data):
             errors.append(f"{year} schedule: {type(e).__name__}: {e}")
             matching_events = []
 
+        # For the current season only, qualifying may not have happened yet
+        # (a brand-new circuit's debut weekend, most notably - there's no
+        # historical year to fall back to at all until *some* session has
+        # run there). FP1 usually runs first, so try it too, after Q - past
+        # seasons always have qualifying data already, so there's nothing to
+        # fall back for.
+        session_types = ["Q", "FP1"] if year == current_year else ["Q"]
         for event in matching_events:
-            attempts.append({
-                "year": year,
-                "race_name": event.get("EventName"),
-                "track": track,
-                "session_type": "Q",
-            })
+            for session_type in session_types:
+                attempts.append({
+                    "year": year,
+                    "race_name": event.get("EventName"),
+                    "track": track,
+                    "session_type": session_type,
+                })
 
         if not attempts:
             # No event in this year's own schedule matched by location or
