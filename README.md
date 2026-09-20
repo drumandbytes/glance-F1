@@ -6,7 +6,7 @@
 
 ![README](https://img.shields.io/badge/Actively%20Maintained-Green)
 ![README](https://img.shields.io/github/v/release/drumandbytes/paddock-api)
-![README](https://img.shields.io/docker/pulls/drumandbytes/f1_api)
+![README](https://img.shields.io/docker/pulls/drumandbytes/paddock-api)
 ![README](https://img.shields.io/github/issues/drumandbytes/paddock-api)
 
 
@@ -54,9 +54,9 @@ This repo uses docker compose to install. Verify that you are up to date. Below 
 version: "3.9"
 
 services:
-  f1_api:
-    container_name: f1_api
-    image: ghcr.io/drumandbytes/f1_api:latest
+  paddock-api:
+    container_name: paddock-api
+    image: ghcr.io/drumandbytes/paddock-api:latest
     environment:
       - TIMEZONE=America/Edmonton # Specify your timezone.
       - TRACK_COLOUR=#e5d486 # Specify desired track map color
