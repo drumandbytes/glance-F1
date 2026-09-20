@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Response
 from fastapi.responses import PlainTextResponse
+from starlette.concurrency import run_in_threadpool
 import fastf1
 import httpx
 import io
@@ -126,7 +127,13 @@ async def get_dynamic_track_map():
         raise ValueError("Missing race time in API response")
 
     try:
-        svg_content = generate_historical_track_map(data)
+        # generate_historical_track_map does a synchronous fastf1
+        # session.load() that can block for 30-90s on a cold cache - run it
+        # off the event loop so a single worker can still serve every other
+        # (cheap, cached) endpoint while this is in flight, instead of
+        # needing a second whole worker process just to survive this one
+        # call.
+        svg_content = await run_in_threadpool(generate_historical_track_map, data)
     except Exception as e:
         return PlainTextResponse(str(e), status_code=500)
 
