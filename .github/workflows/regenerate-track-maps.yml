@@ -1,0 +1,53 @@
+name: Regenerate track maps
+
+# Monthly is a safety margin, not a real cadence requirement - track layouts
+# only ever change between seasons. peter-evans/create-pull-request only
+# opens/updates a PR when the script actually changed a file (plain `git
+# status` under the hood), so a no-op month produces nothing to review.
+on:
+  schedule:
+    - cron: "0 3 1 * *"
+  workflow_dispatch: {}
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache fastf1 data
+        uses: actions/cache@v4
+        with:
+          path: ~/.fastf1
+          key: fastf1-cache-${{ github.run_id }}
+          restore-keys: fastf1-cache-
+
+      - name: Install dependencies
+        run: pip install --no-cache-dir -r API/requirements.txt
+
+      - name: Generate track maps
+        working-directory: API
+        env:
+          TRACK_COLOUR: "#e5d486"
+          TIMEZONE: "Europe/Tallinn"
+        run: python scripts/generate_track_maps.py
+
+      - name: Open PR with any changes
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore: regenerate track maps"
+          title: "chore: regenerate track maps"
+          body: |
+            Monthly scheduled run of `API/scripts/generate_track_maps.py`.
+
+            Only circuits whose rendered SVG actually changed are included -
+            review the diff before merging to confirm it's a real layout
+            change and not a data-source hiccup. Merging this alone doesn't
+            publish a new image; that's still the existing manual
+            build+push step.
+          branch: chore/regenerate-track-maps
+          add-paths: API/static/track_maps/**
