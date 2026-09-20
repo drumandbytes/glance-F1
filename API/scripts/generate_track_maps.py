@@ -15,10 +15,10 @@ from datetime import datetime
 
 import fastf1
 from fastf1.exceptions import RateLimitExceededError
-import httpx
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from API_Endpoints.helpers.schedule import get_season_schedule  # noqa: E402
 from API_Endpoints.map.router import generate_historical_track_map  # noqa: E402
 
 # fastf1's default INFO level logs every fetch/parse step per driver -
@@ -33,15 +33,13 @@ OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "..", "static", "track_maps
 
 def main():
     year = datetime.now().year
-    resp = httpx.get(f"https://f1api.dev/api/{year}", timeout=30)
-    resp.raise_for_status()
-    calendar = resp.json()
-    season = calendar.get("season")
+    races = get_season_schedule(year)
+    season = year
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     failures = []
-    for race in calendar.get("races", []):
+    for i, race in enumerate(races):
         circuit_id = (race.get("circuit") or {}).get("circuitId")
         if not circuit_id:
             continue
@@ -58,7 +56,7 @@ def main():
             # picks up from a warm fastf1 cache for the circuits that did
             # complete, so it isn't starting over.
             print(f"RATE LIMITED, stopping: {e}")
-            failures.append(f"{circuit_id}: rate limited, {len(calendar.get('races', [])) - calendar.get('races', []).index(race) - 1} circuits not attempted")
+            failures.append(f"{circuit_id}: rate limited, {len(races) - i - 1} circuits not attempted")
             break
         except Exception as e:
             print(f"FAILED: {type(e).__name__}: {e}")
