@@ -1,0 +1,20 @@
+# Changelog
+
+## [1.2.0](https://github.com/drumandbytes/paddock-api/compare/v1.1.0...v1.2.0) (2026-09-20)
+
+
+### Features
+
+* add tyre usage per session for the current race weekend ([#7](https://github.com/drumandbytes/paddock-api/issues/7)) ([86417d6](https://github.com/drumandbytes/paddock-api/commit/86417d6ae0c2c5e52d45b73b5e33bf184673578b))
+* drop f1api.dev, use fastf1/Ergast for everything ([1b79466](https://github.com/drumandbytes/paddock-api/commit/1b7946640234952e969efb2caea635d7cc6797eb))
+
+
+### Bug Fixes
+
+* remove dead Lap Record/Length rows from the Next Race widgets ([#13](https://github.com/drumandbytes/paddock-api/issues/13)) ([c94b16a](https://github.com/drumandbytes/paddock-api/commit/c94b16a4b584ee3fbcfb39832e7ae347af4a00af))
+* stop retrying after a rate limit, don't burn through the whole calendar ([8ca9b4a](https://github.com/drumandbytes/paddock-api/commit/8ca9b4a846e58ae2312646be120eb5f171a4b5a4))
+
+
+### Performance Improvements
+
+* select tyre_usage's needed columns before the groupby ([#14](https://github.com/drumandbytes/paddock-api/issues/14)) ([00b59ea](https://github.com/drumandbytes/paddock-api/commit/00b59ea544dd183242373d83a6d6fc14f0e680c9))
