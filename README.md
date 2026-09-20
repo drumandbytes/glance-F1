@@ -5,14 +5,13 @@
 # The F1 Season... At A Glance
 
 ![README](https://img.shields.io/badge/Actively%20Maintained-Green)
-![README](https://img.shields.io/github/v/release/skyallinott/glance-f1)
-![README](https://img.shields.io/docker/pulls/skyallinott/f1_api)
-![README](https://img.shields.io/github/issues/skyallinott/glance-f1)
+![README](https://img.shields.io/github/v/release/drumandbytes/glance-f1)
+![README](https://img.shields.io/docker/pulls/drumandbytes/f1_api)
+![README](https://img.shields.io/github/issues/drumandbytes/glance-f1)
 
 
-![README](https://img.shields.io/github/commit-activity/w/skyallinott/glance-f1)
-![README](https://img.shields.io/github/commits-since/skyallinott/glance-f1/latest)
-![README](https://img.shields.io/github/commits-difference/skyallinott/glance-f1?base=master&head=development&label=Development%20Commits%20Not%20Merged%20Into%20Main)
+![README](https://img.shields.io/github/commit-activity/w/drumandbytes/glance-f1)
+![README](https://img.shields.io/github/commits-since/drumandbytes/glance-f1/latest)
 
 ___
 
@@ -46,7 +45,7 @@ The 4 end points are:
 1. Next race. This features details such as circuit name, lap record holder, and countdown to the race.
 2. Driver championship. This cleans up the naming of each driver and adds a nice nationality flag for each driver.
 3. Constructors championship. Cleans up team names to a simplified form and adds home country flag for each team.
-4. Track map. This generates an SVG of the current track. It relies on positioning data from a prior years event at the same track.
+4. Track map. This generates an SVG of the current track, drawn from [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits)' static circuit geometry - no live session data required, so it works even for a circuit that hasn't hosted a race yet.
 
 ## Widgets
 I really enjoyed the theme and style of the community widgets by @abaza738, so I largely use their theming and design, I just change the underlying API to achieve more custom results.
@@ -61,7 +60,7 @@ version: "3.9"
 services:
   f1_api:
     container_name: f1_api
-    image: skyallinott/f1_api:latest
+    image: ghcr.io/drumandbytes/f1_api:latest
     environment:
       - TIMEZONE=America/Edmonton # Specify your timezone.
       - TRACK_COLOUR=#e5d486 # Specify desired track map color
@@ -91,10 +90,15 @@ glance-F1/
 │   ├── main.py                    # FastAPI application entry point
 │   ├── requirements.txt           # Python dependencies
 │   ├── Dockerfile                 # Container build instructions
+│   ├── scripts/
+│   │   └── generate_track_maps.py # Pre-renders static track map SVGs
+│   ├── static/track_maps/         # Pre-rendered SVGs, served directly when present
 │   └── API_Endpoints/
 │       ├── constructors_cleaner.py
 │       ├── current_race_cleaner.py
 │       ├── drivers_cleaner.py
+│       ├── last_race_cleaner.py
+│       ├── helpers/                # Shared schedule/time/formatting helpers
 │       └── map/
 │           ├── map_generator.py   # Track SVG generation
 │           └── router.py          # Map endpoint logic
