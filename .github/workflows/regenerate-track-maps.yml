@@ -19,13 +19,6 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Cache fastf1 data
-        uses: actions/cache@v4
-        with:
-          path: ~/.fastf1
-          key: fastf1-cache-${{ github.run_id }}
-          restore-keys: fastf1-cache-
-
       - name: Install dependencies
         run: pip install --no-cache-dir -r API/requirements.txt
 
@@ -33,7 +26,6 @@ jobs:
         working-directory: API
         env:
           TRACK_COLOUR: "#e5d486"
-          TIMEZONE: "Europe/Tallinn"
         run: python scripts/generate_track_maps.py
 
       - name: Open PR with any changes

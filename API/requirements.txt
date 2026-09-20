@@ -7,4 +7,3 @@ pycountry
 pytz
 fastapi-cache2
 svgwrite
-numpy

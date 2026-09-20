@@ -1,58 +1,45 @@
-import fastf1
-import numpy as np
+import io
+import math
+import os
+import re
+
 import svgwrite
 from svgwrite.base import Title
-import io
-import os 
-import re
-import unicodedata 
 
-def remove_accents(input_str):
-    nfkd_form = unicodedata.normalize('NFKD', input_str)
-    return u"".join([c for c in nfkd_form if not unicodedata.combining(c)])
+EARTH_RADIUS_M = 6371000
 
-def generate_track_map_svg(year: int, city: str = None, country: str = None, track: str = None, session_type: str = "Q", race_name: str = None) -> str:
+
+def _project_to_local_meters(coordinates):
+    """Equirectangular projection of [lon, lat] pairs to flat local meters -
+    good enough for a track a few km across, and keeps the SVG drawing math
+    below (padding, stroke width) working in roughly the same units a
+    telemetry-derived track outline used to be in."""
+    mid_lat_rad = math.radians(sum(lat for _, lat in coordinates) / len(coordinates))
+    points = []
+    for lon, lat in coordinates:
+        x = math.radians(lon) * math.cos(mid_lat_rad) * EARTH_RADIUS_M
+        # Latitude increases north; SVG y increases downward - flip it so
+        # the map isn't upside down.
+        y = -math.radians(lat) * EARTH_RADIUS_M
+        points.append((x, y))
+    return points
+
+
+def render_track_svg(coordinates, track_name: str = None) -> str:
     track_color = os.environ['TRACK_COLOUR'].strip()
 
-    match = re.search(r'^#(?:[0-9a-fA-F]{3}){1,2}$', track_color)
-
-    if not match:
+    if not re.search(r'^#(?:[0-9a-fA-F]{3}){1,2}$', track_color):
         raise ValueError("Not a valid hex string")
 
-    # Load data from f1 API
-    if race_name:
-        gp = race_name
-        print(gp)
-    elif city and country:
-        gp = city + " " + country
-    else:
-        raise ValueError("Must provide either race name or city + country")
-    session = fastf1.get_session(year, gp, session_type)
+    if not coordinates:
+        raise ValueError("No track coordinates to draw")
 
-    if not race_name:
-        if (city != remove_accents(session.event.Location)) or (country != remove_accents(session.event.Country)):
-            raise ValueError("Map not matching correctly")
+    points = _project_to_local_meters(coordinates)
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
 
-    # I hate this API, please let me load just one drivers telemetry not everything...
-    # SO SO SO SO SO SLOW
-    session.load(weather=False, messages=False, telemetry=True)
-    lap = session.laps.pick_fastest()
-    telemetry = lap.get_telemetry().dropna(subset=["X", "Y"])
-    telemetry.loc[len(telemetry)] = telemetry.iloc[0]
-
-    # api position data defaults to top is 'north.' This isn't how most maps "look" though,
-    # so they also include a rotation parameter to match standard images
-    angle = (session.get_circuit_info().rotation / 180) * np.pi
-    rot_mat = np.array([[np.cos(angle), np.sin(angle)], [-np.sin(angle), np.cos(angle)]])
-    rotated = np.dot(telemetry[['X', 'Y']], rot_mat)
-
-    x = rotated[:, 0]
-    # Apply a vertical flip since it seems the angle is usually a vertical flip off.
-    y = -rotated[:, 1]
-
-    # Calculate bounding box
-    min_x, max_x = np.min(x), np.max(x)
-    min_y, max_y = np.min(y), np.max(y)
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
     width = max_x - min_x
     height = max_y - min_y
 
@@ -65,37 +52,57 @@ def generate_track_map_svg(year: int, city: str = None, country: str = None, tra
     viewbox_height = height + 2 * pad_y
     x_shift = -min_x + pad_x
     y_shift = -min_y + pad_y
-    x = x + x_shift
-    y = y + y_shift
 
-    points = list(zip(x, y))
+    points = [(x + x_shift, y + y_shift) for x, y in points]
 
     svg_buf = io.StringIO()
 
     # Match column: small in glance, but probably shouldnt if wanna use in main
     display_width = 300
 
-    # Have to sort out aspect ratio since will differ for every track. 
-    aspect_ratio = viewbox_height/viewbox_width
+    # Have to sort out aspect ratio since will differ for every track.
+    aspect_ratio = viewbox_height / viewbox_width
     display_height = int(display_width * aspect_ratio)
     dwg = svgwrite.Drawing(svg_buf, profile='full',
                            size=(f"{display_width}px", f"{display_height}px"),
                            viewBox=f"0 0 {viewbox_width} {viewbox_height}",
                            preserveAspectRatio="xMidYMid meet")
 
+    # A single track_color line reads fine on whichever background it was
+    # tuned against, but disappears on the other one (e.g. a light track
+    # color against a light dashboard theme). Draw a wider black/white
+    # border underneath it instead - black on a light background, white on
+    # a dark one - so the outline stays visible either way regardless of
+    # what track_color itself is.
+    outline_class = 'track-outline'
     track_class = 'track-line'
-    # Have to have a super thick line
     dwg.defs.add(dwg.style(f"""
+        .{outline_class} {{
+            fill: transparent;
+            stroke: black;
+            stroke-width: 56;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }}
+        @media (prefers-color-scheme: dark) {{
+            .{outline_class} {{
+                stroke: white;
+            }}
+        }}
         .{track_class} {{
             fill: transparent;
             stroke: {track_color};
             stroke-width: 40;
-            title: {track};
-            filter: drop-shadow(0 0 40px white), drop-shadow(0 0 70px {track_color});
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            title: {track_name};
         }}"""))
 
+    outline = dwg.polyline(points=points, class_=outline_class, fill='none')
+    dwg.add(outline)
+
     polyline = dwg.polyline(points=points, class_=track_class, fill='none')
-    polyline.elements.append(Title(track))
+    polyline.elements.append(Title(track_name))
     dwg.add(polyline)
     dwg.write(svg_buf)
 
