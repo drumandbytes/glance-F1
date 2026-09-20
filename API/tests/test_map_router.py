@@ -1,3 +1,6 @@
+import pandas as pd
+
+import API_Endpoints.map.router as router_module
 from API_Endpoints.map.router import historical_event_matches, normalize_name
 
 
@@ -31,3 +34,48 @@ def test_location_alone_is_not_enough_without_matching_country():
 
 def test_accent_and_case_insensitive_matching():
     assert historical_event_matches(_event(Location="Montréal"), "montreal", "Belgium", None)
+
+
+def _schedule_df(rows):
+    return pd.DataFrame(rows)
+
+
+def test_no_schedule_match_skips_year_without_a_live_lookup(monkeypatch):
+    # Real bug, caught against live data: a year with no matching event at
+    # all (e.g. Shanghai during its COVID-era calendar suspension) used to
+    # fall through to a fuzzy city+country guess against fastf1.get_session,
+    # which was observed to silently resolve to a totally unrelated race
+    # ("Mexico City Mexico" corrected to "Austrian Grand Prix") and still
+    # cost a full expensive session-load attempt before being discarded.
+    # Confirms it's skipped instead - no live lookup for that year at all.
+    calls = []
+
+    def fake_get_event_schedule(year):
+        if year == 2023:
+            return _schedule_df([{"Location": "Unrelated", "Country": "Nowhere", "EventName": "Unrelated Grand Prix"}])
+        return _schedule_df([{"Location": "Shanghai", "Country": "China", "EventName": "Chinese Grand Prix"}])
+
+    def fake_generate_track_map_svg(**kwargs):
+        calls.append(kwargs)
+        return "<svg>fake</svg>"
+
+    monkeypatch.setattr(router_module.fastf1, "get_event_schedule", fake_get_event_schedule)
+    monkeypatch.setattr(router_module, "generate_track_map_svg", fake_generate_track_map_svg)
+
+    data = {
+        "race": [{
+            "raceName": "Chinese Grand Prix",
+            "circuit": {"city": "Shanghai", "country": "China", "circuitName": "Shanghai International Circuit"},
+        }],
+        "season": 2024,
+    }
+
+    svg = router_module.generate_historical_track_map(data)
+
+    assert svg == "<svg>fake</svg>"
+    # 2023 had no matching event and must not have triggered a live lookup -
+    # exactly one call, for 2022 (the first year that actually matches), not
+    # one wasted guess per skipped year.
+    assert len(calls) == 1
+    assert calls[0]["year"] == 2022
+    assert calls[0]["race_name"] == "Chinese Grand Prix"

@@ -65,21 +65,23 @@ def generate_historical_track_map(data):
                 "session_type": "Q",
             })
 
-        if city and country and not attempts:
-            attempts.append({
-                "year": year,
-                "city": city,
-                "country": country,
-                "track": track,
-                "session_type": "Q",
-            })
-        if race_name and not attempts:
-            attempts.append({
-                "year": year,
-                "race_name": race_name,
-                "track": track,
-                "session_type": "Q",
-            })
+        if not attempts:
+            # No event in this year's own schedule matched by location or
+            # name - fastf1.get_session() only takes a fuzzy free-text query,
+            # and guessing one from city+country alone has been observed to
+            # silently resolve to a WRONG, unrelated race (e.g. "Mexico City
+            # Mexico" corrected to "Austrian Grand Prix") for a year that
+            # simply never had this circuit on the calendar (a
+            # COVID-suspended season, for one real example - every walked-
+            # back year is checked against that year's *own* schedule, so
+            # this isn't rare). That guess used to cost a full, expensive
+            # session-load attempt - each one loads laps and full-grid
+            # telemetry for the whole field - before this function's own
+            # match-validation caught the mismatch and discarded it, which
+            # is what actually exhausts the 500-calls/hour budget after only
+            # a handful of circuits. Skip the year instead.
+            errors.append(f"{year}: no matching event in this year's schedule")
+            continue
 
         for kwargs in attempts:
             try:
