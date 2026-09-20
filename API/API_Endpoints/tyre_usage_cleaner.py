@@ -52,12 +52,22 @@ def _stints_for_session(round_number: int, year: int, fastf1_type: str) -> list[
     session = fastf1.get_session(year, round_number, fastf1_type)
     session.load(laps=True, telemetry=False, weather=False, messages=False)
 
-    laps = session.laps
-    if laps is None or laps.empty:
+    if session.laps is None or session.laps.empty:
         return []
 
+    # session.laps carries several dozen columns (sector times, speed traps,
+    # track status, ...) - select the 3 actually used immediately, rather
+    # than keep the full frame (measured ~160MB peak RSS for one session's
+    # worth) alive for the rest of this function. Driver/Compound are both
+    # low-cardinality (~24 drivers, ~7 compounds) - categorical dtype instead
+    # of the default generic object dtype shrinks this further.
+    laps = session.laps.loc[:, ["Driver", "Stint", "Compound"]].astype({
+        "Driver": "category",
+        "Compound": "category",
+    })
+
     stints = (
-        laps.groupby(["Driver", "Stint"])["Compound"]
+        laps.groupby(["Driver", "Stint"], observed=True)["Compound"]
         .agg(["first", "count"])
         .reset_index()
         .sort_values(["Driver", "Stint"])
@@ -65,8 +75,8 @@ def _stints_for_session(round_number: int, year: int, fastf1_type: str) -> list[
 
     by_driver: dict[str, list[dict]] = {}
     for _, row in stints.iterrows():
-        by_driver.setdefault(row["Driver"], []).append({
-            "compound": row["first"],
+        by_driver.setdefault(str(row["Driver"]), []).append({
+            "compound": str(row["first"]),
             "laps": int(row["count"]),
         })
 
