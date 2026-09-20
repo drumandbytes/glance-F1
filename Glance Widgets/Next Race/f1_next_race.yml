@@ -39,11 +39,5 @@
         <p class="size-h6">
           Name: {{ $session.String "circuit.circuitName" }}
         </p>
-        <p class="size-h6">
-          Lap Record: {{ $session.String "circuit.lapRecord" }}, {{ $session.String "circuit.fastestLapDriverName" }} ({{ $session.String "circuit.fastestLapYear"}})
-        </p>
-        <p class="size-h6">
-          Length: {{ $session.String "laps" }} laps @ {{ $session.String "circuit.circuitLengthKm" }} KMs
-        </p>
       </div>
     </div>
