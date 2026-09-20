@@ -8,7 +8,6 @@
 
 ![README](https://img.shields.io/badge/Actively%20Maintained-Green)
 ![README](https://img.shields.io/github/v/release/drumandbytes/paddock-api)
-![README](https://img.shields.io/docker/pulls/drumandbytes/paddock-api)
 ![README](https://img.shields.io/github/issues/drumandbytes/paddock-api)
 ![README](https://img.shields.io/github/commit-activity/w/drumandbytes/paddock-api)
 ![README](https://img.shields.io/github/commits-since/drumandbytes/paddock-api/latest)
