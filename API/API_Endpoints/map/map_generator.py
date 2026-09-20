@@ -29,11 +29,7 @@ def generate_track_map_svg(year: int, city: str = None, country: str = None, tra
         raise ValueError("Must provide either race name or city + country")
     session = fastf1.get_session(year, gp, session_type)
 
-    # FastF1 and F1API.dev have different country names for UK.
-    #if (gp == "Silverstone Great Britain"):
-    #    gp = "Silverstone United Kingdom"
-
-    if not race_name: 
+    if not race_name:
         if (city != remove_accents(session.event.Location)) or (country != remove_accents(session.event.Country)):
             raise ValueError("Map not matching correctly")
 

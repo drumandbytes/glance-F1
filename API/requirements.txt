@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-jinja2
 httpx
 fastf1
 pycountry

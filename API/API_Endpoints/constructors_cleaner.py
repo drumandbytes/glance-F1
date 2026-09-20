@@ -1,22 +1,14 @@
 from fastapi import APIRouter
 from fastapi_cache import FastAPICache
-import httpx
-from datetime import datetime, timedelta
-import hashlib
-import json
+from datetime import datetime
 
-import fastf1
-from fastf1.ergast import Ergast 
+from fastf1.ergast import Ergast
 
-from .helpers.functions import country_to_code, get_next_race_end, format_team_name
-from .helpers.global_vars import NEXT_RACE_API_URL, nationality_map, default_expire
-from .helpers.time_functions import MT, UTC
+from .helpers.functions import country_to_code
+from .helpers.global_vars import nationality_map
+from .helpers.time_functions import MT
 
 router = APIRouter()
-
-def make_signature(results):
-    return hashlib.md5(json.dumps(results, 
-        sort_keys=True).encode()).hexdigest()
 
 @router.get("/", summary="Fetch current constructors championship")
 async def get_constructors_championship():
