@@ -3,9 +3,7 @@ from fastapi.responses import PlainTextResponse
 from starlette.concurrency import run_in_threadpool
 import fastf1
 import httpx
-import io
-from datetime import datetime, timedelta
-import pytz
+from datetime import datetime
 import os
 import hashlib
 import json
@@ -13,9 +11,16 @@ from fastapi_cache import FastAPICache
 
 from .map_generator import generate_track_map_svg, remove_accents
 from ..helpers.global_vars import NEXT_RACE_API_URL, default_expire
-from ..helpers.time_functions import MT
 
 router = APIRouter()
+
+# Pre-rendered by scripts/generate_track_maps.py, one file per current-season
+# circuitId - see .github/workflows/regenerate-track-maps.yml (runs monthly,
+# PRs whatever changed). Track layouts change rarely (once every few years,
+# always between seasons), so this is the fast path for every normal request;
+# live generation below only ever runs for a circuit that script hasn't
+# covered yet (freshly added to the calendar since its last run).
+STATIC_MAP_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "static", "track_maps")
 
 def make_signature(data):
     return hashlib.md5(json.dumps(data, 
@@ -91,13 +96,6 @@ def historical_event_matches(event, city, country, race_name):
 
 @router.get("/", summary="Fetch next track map")
 async def get_dynamic_track_map():
-    cache_key = "track_map_svg"
-    cache = FastAPICache.get_backend()
-
-    # Try cached version
-    cached = await cache.get(cache_key)
-    old_signature = cached.get("signature") if cached else None
-
     async with httpx.AsyncClient() as client:
         try:
             resp = await client.get(NEXT_RACE_API_URL)
@@ -105,26 +103,29 @@ async def get_dynamic_track_map():
             data = resp.json()
         except Exception as e:
             return PlainTextResponse(f"Failed to fetch race info: {str(e)}", status_code=502)
-        
-    upstream_signature = make_signature({
-        "race": data.get("race"),
-        "next_event": data.get("next_event")
-    })
-
 
     race = data.get("race", [{}])[0]
-    race_dt_str = race.get("schedule", {}).get("race", {}).get("datetime_rfc3339")
+    circuit_id = (race.get("circuit") or {}).get("circuitId")
 
+    if circuit_id:
+        static_path = os.path.join(STATIC_MAP_DIR, f"{circuit_id}.svg")
+        if os.path.isfile(static_path):
+            with open(static_path) as f:
+                return Response(content=f.read(), media_type="image/svg+xml")
+
+    # Fallback: circuit not yet pre-rendered (e.g. added to the calendar
+    # since the generator script's last monthly run). Cached per-circuit so
+    # repeated dashboard refreshes before the next scheduled run don't each
+    # re-trigger a fresh 30-90s fastf1 load.
+    cache = FastAPICache.get_backend()
+    cache_key = f"track_map_svg:{circuit_id or make_signature(race)}"
+    cached = await cache.get(cache_key)
+    if cached:
+        return Response(content=cached, media_type="image/svg+xml")
+
+    race_dt_str = race.get("schedule", {}).get("race", {}).get("datetime_rfc3339")
     if not race_dt_str:
         return PlainTextResponse("Missing race datetime", status_code=500)
-    race_dt = datetime.fromisoformat(race_dt_str).astimezone(MT)
-    now = datetime.now(MT)
-    
-    if cached and old_signature == upstream_signature:
-        return Response(content=cached["svg"], media_type="image/svg+xml")
-
-    if not race_dt_str:
-        raise ValueError("Missing race time in API response")
 
     try:
         # generate_historical_track_map does a synchronous fastf1
@@ -137,38 +138,5 @@ async def get_dynamic_track_map():
     except Exception as e:
         return PlainTextResponse(str(e), status_code=500)
 
-    expire = default_expire
-    expiry_dt = now + timedelta(seconds = default_expire)
-    if now > race_dt:
-        expire = int((race_dt - now).total_seconds())
-        expiry_dt = race_dt
-    elif now < race_dt + timedelta(seconds = default_expire):
-        expiry_dt = race_dt + timedelta(seconds = default_expire)
-        expire = int((expiry_dt - now).total_seconds())
-    else:
-        expire = default_expire
-        expiry_dt = now + timedelta(seconds= default_expire)
-
-        if old_signature and old_signature != upstream_signature:
-            print("Race changed, cache invalid, fetching new map")
-
-            next_dt = data.get("next_event", {}).get("datetime")
-            if next_dt:
-                next_race_dt = datetime.fromisoformat(next_dt)
-
-                if next_race_dt.tzinfo is None:
-                    next_race_dt = pytz.utc.localize(next_race_dt)
-
-                next_race_dt = next_race_dt.astimezone(MT)
-
-                expire = int((next_race_dt - now).total_seconds())
-                expiry_dt = next_race_dt
-
-    expire_seconds = max(int((expiry_dt - now).total_seconds()), 60)
-
-    await cache.set(cache_key, {
-        "svg": svg_content,
-        "signature": upstream_signature
-        }, expire=expire_seconds)
-
+    await cache.set(cache_key, svg_content, expire=default_expire)
     return Response(content=svg_content, media_type="image/svg+xml")
