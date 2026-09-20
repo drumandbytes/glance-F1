@@ -1,0 +1,32 @@
+name: Auto merge
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+jobs:
+  auto-merge:
+    # The reusable workflow cannot grant itself more than the caller has, and
+    # the org default for GITHUB_TOKEN is read-only — so declare it here.
+    permissions:
+      contents: write
+      pull-requests: write
+    # Only the conclusion is checked, not workflow_run.event: a same-repo
+    # branch (which is how Dependabot and dnb-robot push) triggers CI as
+    # 'push', not 'pull_request', so gating on the event would silently skip
+    # every run. The reusable workflow looks up the PR itself and enforces
+    # the author allow-list, which is the actual safety gate; a run with no
+    # open PR just no-ops.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      (github.event.workflow_run.actor.login == 'dependabot[bot]' ||
+       github.event.workflow_run.actor.login == 'dnb-robot[bot]')
+    uses: drumandbytes/reusable-actions/.github/workflows/auto-merge.yml@v1
+    with:
+      # Both unconditional: dependency bumps and regenerate-track-maps' own
+      # PRs (opened as dnb-robot). No release-please here, so there's no
+      # patch/minor/major distinction to gate on - patch-only-authors is
+      # specific to that.
+      allowed-authors: '["dependabot[bot]", "dnb-robot[bot]"]'
+    secrets: inherit
