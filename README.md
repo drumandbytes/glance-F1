@@ -1,15 +1,15 @@
 
 
 <div align="center">
-  
-# The F1 Season... At A Glance
+
+# paddock-api
+
+**F1 data, shaped for a dashboard - not a spreadsheet.**
 
 ![README](https://img.shields.io/badge/Actively%20Maintained-Green)
 ![README](https://img.shields.io/github/v/release/drumandbytes/paddock-api)
 ![README](https://img.shields.io/docker/pulls/drumandbytes/paddock-api)
 ![README](https://img.shields.io/github/issues/drumandbytes/paddock-api)
-
-
 ![README](https://img.shields.io/github/commit-activity/w/drumandbytes/paddock-api)
 ![README](https://img.shields.io/github/commits-since/drumandbytes/paddock-api/latest)
 
@@ -17,39 +17,34 @@ ___
 
 <h3>
 
-[Background](#background) • [Why Use This Repo?](#why-use-this-repo) • [Solution](#solution)
+[Why This Exists](#why-this-exists) • [What It Does](#what-it-does) • [How It's Built](#how-its-built)
 <br>
-[Installation](#installation) • [API Reference](#api-reference) • [Development](#development) • [Demo](#demo)
+[Getting Started](#getting-started) • [API Reference](#api-reference) • [Development](#development) • [Demo](#demo)
 
 </h3>
 
 </div>
 
-# Background
-I host [glance](https://github.com/glanceapp/glance) on one of my home servers. As a big F1 fan, I was excited to see that the community had added a [F1 integration](https://github.com/glanceapp/community-widgets/blob/main/widgets/formula1-widgets-by-abaza738/README.md), but was disappointed with the rigidity of the API it uses.
+# Why This Exists
+I run [Glance](https://github.com/glanceapp/glance) on a home server, and I wanted an F1 corner of it that felt like it belonged there - local time, a track map before I've even had coffee on qualifying day, team names short enough to fit a dashboard tile instead of "Mercedes-AMG Petronas Formula One Team." The community's [F1 widget](https://github.com/glanceapp/community-widgets/blob/main/widgets/formula1-widgets-by-abaza738/README.md) got the styling right, but the API behind it was built for a generic consumer, not a self-hosted dashboard: everything in UTC, no caching (so every widget refresh meant a slow round-trip), and just enough detail to be a bit unsatisfying for a Friday-night "what's happening this weekend" glance.
 
-# Why Use this Repo?
-I ran into the following issues with the API that this repository solves:
+So this exists to be the API I actually wanted underneath those widgets - same look, an engine built for exactly one job.
 
-1. Times were shown in UTC, not specific to a users timezone.
-2. API calls were slow and there was no smart caching, slowing down my Glance.
-3. Lack of control over data fields like team name. It shows lengthy official team names like "Mercedes AMG Petronas F1 Team" instead of just "Mercedes"
-4. Lacking detail. For instance, I wanted a track map, and previous race results when it displayed the next race.
-5. Lack of dynamic control over event time. While you can select what event to have a countdown to (IE race vs. qualifying), you have to manually specify this instead of using time analysis to show the next event that hasn't passed.
+# What It Does
+Point it at a race weekend and it tells you what's actually useful to know: when the next session is, in your own timezone, counting down to whichever one you care about. It knows who's leading the championship and by how much, cleaned up to team names that fit a phone screen. It'll draw you the track before a single lap has been driven there. And once a session's actually happened, it'll tell you what tyres everyone was on and for how long - not the fantasy of who's got how many sets left, just what's real.
 
-# Solution
-## APIs
-As a solution, I built a small FastAPI service that gives me full control over what I fetch and how it's cached. Every endpoint uses smart caching so it only refreshes after the underlying data can actually have changed (e.g. once a session starts, or a few hours after a race finishes), keeping Glance fast without hammering upstream data sources.
+Everything is cached deliberately, not by default TTL - a session's data doesn't change until the next session starts, so that's when the cache actually expires, not some arbitrary five minutes later.
 
-Data comes from [FastF1](https://github.com/theOehrly/Fast-F1) (schedules, lap/tyre data) and its bundled [Ergast/Jolpica](https://github.com/jolpica/jolpica-f1) mirror (standings, results) - see [API Reference](#api-reference) for the full endpoint list. Track maps are the one exception: they're drawn from [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits)' static circuit geometry instead of session telemetry, so they work even for a circuit that's never hosted a session (a brand-new venue's debut weekend, for instance) with no live-timing rate limit to worry about.
+# How It's Built
+It's a small FastAPI service, and the interesting decisions are mostly about *where the data comes from* and *when it's actually fetched*.
 
-## Widgets
-I really enjoyed the theme and style of the community widgets by @abaza738, so I largely use their theming and design, I just change the underlying API to achieve more custom results.
+Schedules, lap data, and tyre usage come from [FastF1](https://github.com/theOehrly/Fast-F1); standings and race results come from its bundled Ergast/Jolpica mirror. Both are free, but F1's live-timing backend behind them has a real 500-calls/hour ceiling, and it's shared - burn through it chasing something that isn't there, and every other endpoint on the same network starves too. So the rule here is: only ever ask for a session that's actually happened, and never guess.
 
-See the [`Glance Widgets/`](./Glance%20Widgets/) folder for the widgets you can drop straight into your Glance config - each subfolder has its own README with a preview. Not every endpoint has a matching widget yet (there's currently none for tyre usage); any endpoint in the [API Reference](#api-reference) works with Glance's `custom-api` widget type if you want to build your own. For more info on adding config files like these, see the [Glance documentation](https://github.com/glanceapp/glance/blob/main/docs/configuration.md#including-other-config-files).
+Track maps break that pattern entirely, on purpose. Tracing a circuit's outline from a car's GPS telemetry only works once a car has actually driven it - which is useless for a brand-new venue's debut weekend, and turned out to be the single most fragile part of this whole service. It's replaced now with [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits), a maintained dataset of real circuit geometry that doesn't care whether a session has happened yet. No live API call, no rate limit, works for a track that's never hosted a race.
 
-# Installation
-This repo uses docker compose to install. Verify that you are up to date. Below is an example compose file.
+# Getting Started
+Runs as a single container - `docker compose` is the easiest way in.
+
 ```yaml
 version: "3.9"
 
@@ -68,23 +63,23 @@ services:
 
 | Variable | Required | Description |
 |---|---|---|
-| `TIMEZONE` | Yes | IANA timezone name (e.g. `America/Edmonton`, `Europe/Tallinn`) - every timestamp in the API is converted to this before being returned. |
+| `TIMEZONE` | Yes | IANA timezone name (e.g. `America/Edmonton`, `Europe/Tallinn`) - every timestamp the API returns is converted to this. |
 | `TRACK_COLOUR` | Yes | Hex colour (e.g. `#e5d486`) for the track-map line. |
-| `EVENT_DETAIL` | No, defaults to `main` | Controls which sessions `/f1/next_race/` counts down to: `main` (quali + races, skips practice), `race` (races only), or `detailed` (every session). |
+| `EVENT_DETAIL` | No, defaults to `main` | Which sessions `/f1/next_race/` counts down to: `main` (quali + races, skips practice), `race` (races only), or `detailed` (every session). |
 
-To integrate with your Glance setup (to install Glance, see their documentation), add the widget YAMLs you want from [`Glance Widgets/`](./Glance%20Widgets/) - currently [Next Race](./Glance%20Widgets/Next%20Race/), [Last Race Results](./Glance%20Widgets/Last%20Race/), [Drivers Championship](./Glance%20Widgets/Drivers%20Championship/), and [Constructors Championship](./Glance%20Widgets/Constructors%20Championship/) - to your Glance config, making sure to replace `${F1_API_URL}` with your device's IP and updating the port if needed.
+Once it's running, grab the widgets you want from [`Glance Widgets/`](./Glance%20Widgets/) - [Next Race](./Glance%20Widgets/Next%20Race/), [Last Race Results](./Glance%20Widgets/Last%20Race/), [Drivers Championship](./Glance%20Widgets/Drivers%20Championship/), and [Constructors Championship](./Glance%20Widgets/Constructors%20Championship/) - and drop them into your Glance config, swapping `${F1_API_URL}` for wherever this container actually lives. The styling is borrowed from [@abaza738](https://github.com/glanceapp/community-widgets/blob/main/widgets/formula1-widgets-by-abaza738/README.md)'s original community widgets; only the API underneath changed. Not every endpoint has a ready-made widget yet (tyre usage doesn't, currently) - any endpoint below works with Glance's `custom-api` widget type if you want to wire up your own. See the [Glance docs](https://github.com/glanceapp/glance/blob/main/docs/configuration.md#including-other-config-files) for how config files like these get included.
 
 # API Reference
-All endpoints return JSON except the track map, which returns an SVG image directly.
+Everything returns JSON except the track map, which is an SVG image.
 
 | Endpoint | Description |
 |---|---|
-| `GET /f1/next_race/` | The next (or currently in-progress) race weekend: full session schedule, localized to `TIMEZONE`, plus a countdown to the next session per `EVENT_DETAIL`. |
+| `GET /f1/next_race/` | The next (or currently in-progress) race weekend - full session schedule in your `TIMEZONE`, counting down to the next session per `EVENT_DETAIL`. |
 | `GET /f1/last_race/` | Full classification for the most recently completed race. |
-| `GET /f1/drivers_standings/` | Current drivers' championship standings, with simplified team names and nationality flags. |
-| `GET /f1/constructors_standings/` | Current constructors' championship standings, with simplified team names and nationality flags. |
-| `GET /f1/next_map/` | An SVG track map for the next race's circuit. |
-| `GET /f1/tyre_usage/` | Per-driver tyre compound and stint length for each session of the current race weekend (FP1-Race), for whichever sessions have happened so far. Usage only - see the endpoint's own module docstring for why allocation/sets-remaining isn't included. |
+| `GET /f1/drivers_standings/` | Drivers' championship standings, simplified team names, nationality flags. |
+| `GET /f1/constructors_standings/` | Constructors' championship standings, simplified team names, nationality flags. |
+| `GET /f1/next_map/` | Track map for the next race's circuit. |
+| `GET /f1/tyre_usage/` | Per-driver compound and stint length for each session of the current weekend that's happened so far (FP1 through Race). Usage only, not allocation - the endpoint's own module docstring explains why. |
 
 # Development
 Requires Python 3.11+.
@@ -95,17 +90,12 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-CI runs the test suite on every push and PR (see [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)). [`.github/workflows/regenerate-track-maps.yml`](./.github/workflows/regenerate-track-maps.yml) re-renders every circuit's track map monthly (or on demand) and opens a PR if any changed; [`.github/workflows/publish.yml`](./.github/workflows/publish.yml) builds and pushes the Docker image on a `v*` tag push (`git tag vX.Y.Z && git push origin vX.Y.Z`).
+`docker compose up --build` runs the whole thing locally the way it runs in production.
 
-To run the full thing locally the same way it runs in production:
-```sh
-docker compose up --build
-```
+Three workflows keep this repo honest: [`ci.yml`](./.github/workflows/ci.yml) runs the test suite on every push and PR; [`regenerate-track-maps.yml`](./.github/workflows/regenerate-track-maps.yml) re-renders every circuit's map monthly (or on demand) and opens a PR if anything actually changed; [`release-please.yml`](./.github/workflows/release-please.yml) turns Conventional Commits into a version-bump PR, and merging it tags a release, which [`publish.yml`](./.github/workflows/publish.yml) picks up and builds/pushes to GHCR.
 
 # Demo
-On the left below is a possible configuration using this custom API. On the right is a configuration using the default API used in the community widget.
-
-The largest difference is localized time zones, track map, added track details, and general tidying up of the championship orders. 
+Left is this API driving the widgets. Right is the default community integration they're built on. Same styling - the difference is everything underneath it: local time instead of UTC, a track map, and standings that don't need a decoder ring for team names.
 
 <div align="center" >
   <img src="./Demo Images/glance-f1.png" width="225px" height = "600px" hspace="20px" />
@@ -138,7 +128,7 @@ paddock-api/
 │           └── router.py           # Map endpoint logic
 ├── Glance Widgets/                # YAML files for Glance integration
 ├── .github/
-│   ├── workflows/                 # CI, track-map regeneration, publish, auto-merge
+│   ├── workflows/                 # CI, track-map regeneration, release, publish, auto-merge
 │   └── dependabot.yml
 ├── LICENSE
 └── docker-compose.yaml            # Local development compose file
