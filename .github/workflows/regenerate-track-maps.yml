@@ -39,7 +39,7 @@ jobs:
           client-id: ${{ secrets.DNB_ROBOT_CLIENT_ID }}
           private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
           owner: drumandbytes
-          repositories: glance-F1
+          repositories: paddock-api
 
       - name: Open PR with any changes
         uses: peter-evans/create-pull-request@v8
