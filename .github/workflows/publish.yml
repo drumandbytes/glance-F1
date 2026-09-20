@@ -1,9 +1,10 @@
 name: Publish image
 
-# Triggered by pushing a version tag (git tag v1.1.0 && git push origin v1.1.0)
-# - a deliberate release action, not every commit to master. Uses
-# GITHUB_TOKEN for GHCR auth (packages: write below) - no separate secret to
-# manage.
+# Triggered by a version tag push - normally release-please.yml pushing one
+# automatically once its release PR is merged, or push one by hand:
+# git tag v1.1.0 && git push origin v1.1.0. Either way, a deliberate release
+# action, not every commit to master. Uses GITHUB_TOKEN for GHCR auth
+# (packages: write below) - no separate secret to manage.
 on:
   push:
     tags:
@@ -27,7 +28,7 @@ jobs:
       - uses: docker/metadata-action@v6
         id: meta
         with:
-          images: ghcr.io/drumandbytes/f1_api
+          images: ghcr.io/drumandbytes/paddock-api
           tags: |
             type=semver,pattern={{version}}
             type=raw,value=latest
