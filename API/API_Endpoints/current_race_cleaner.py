@@ -3,8 +3,8 @@ from fastapi_cache import FastAPICache
 from datetime import datetime, timedelta
 import os
 
-from .helpers.schedule import get_season_schedule
-from .helpers.time_functions import TZ, MT, UTC, convert_to_mt, get_datetime
+from .helpers.schedule import get_season_schedule, find_current_race
+from .helpers.time_functions import TZ, MT, convert_to_mt, get_datetime
 from .helpers.global_vars import default_expire
 
 router = APIRouter()
@@ -24,24 +24,8 @@ async def get_next_race():
     except Exception as e:
         return {"error": f"Exception while fetching: {e}"}
 
-    races = sorted(races, key=lambda r: r.get("schedule", {}).get("race", {}).get("date", ""))
-
-    # Loop through list in order until find first race with date past today.
-    next_race = None
     now = datetime.now(MT)
-    for race in races:
-        race_date_str = race.get("schedule", {}).get("race", {}).get("date")
-        race_time_str = race.get("schedule", {}).get("race", {}).get("time")
-        if not race_date_str or not race_time_str:
-            continue
-
-        race_datetime_utc = datetime.strptime(f"{race_date_str}T{race_time_str}", "%Y-%m-%dT%H:%M:%SZ")
-        race_datetime_utc = UTC.localize(race_datetime_utc)
-
-        race_datetime_local = race_datetime_utc.astimezone(MT)
-        if race_datetime_local >= now:
-            next_race = race
-            break
+    next_race = find_current_race(races, now)
 
     if not next_race:
         return {"message": "No upcoming race found"}
