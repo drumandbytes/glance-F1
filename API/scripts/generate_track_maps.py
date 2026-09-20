@@ -14,6 +14,7 @@ import sys
 from datetime import datetime
 
 import fastf1
+from fastf1.exceptions import RateLimitExceededError
 import httpx
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -49,6 +50,16 @@ def main():
         data = {"race": [race], "season": season}
         try:
             svg = generate_historical_track_map(data)
+        except RateLimitExceededError as e:
+            # Account-wide, not per-circuit - every remaining circuit would
+            # fail identically, so stop instead of burning through the rest
+            # of the calendar on guaranteed failures. Whatever's already
+            # written stays; re-running later (next month, or by hand)
+            # picks up from a warm fastf1 cache for the circuits that did
+            # complete, so it isn't starting over.
+            print(f"RATE LIMITED, stopping: {e}")
+            failures.append(f"{circuit_id}: rate limited, {len(calendar.get('races', [])) - calendar.get('races', []).index(race) - 1} circuits not attempted")
+            break
         except Exception as e:
             print(f"FAILED: {type(e).__name__}: {e}")
             failures.append(f"{circuit_id}: {type(e).__name__}: {e}")

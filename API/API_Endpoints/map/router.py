@@ -2,6 +2,7 @@ from fastapi import APIRouter, Response
 from fastapi.responses import PlainTextResponse
 from starlette.concurrency import run_in_threadpool
 import fastf1
+from fastf1.exceptions import RateLimitExceededError
 import httpx
 from datetime import datetime
 import os
@@ -45,6 +46,13 @@ def generate_historical_track_map(data):
                 event for _, event in schedule.iterrows()
                 if historical_event_matches(event, city, country, race_name)
             ]
+        except RateLimitExceededError:
+            # A hard rate limit, not "this year doesn't match" - every
+            # remaining attempt in this walk-back loop would fail the exact
+            # same way, so retrying them is pure wasted requests against an
+            # already-exceeded limit. Let it propagate instead of consuming
+            # it into `errors` and trying the next year anyway.
+            raise
         except Exception as e:
             errors.append(f"{year} schedule: {type(e).__name__}: {e}")
             matching_events = []
@@ -76,6 +84,8 @@ def generate_historical_track_map(data):
         for kwargs in attempts:
             try:
                 return generate_track_map_svg(**kwargs)
+            except RateLimitExceededError:
+                raise
             except Exception as e:
                 errors.append(f"{year}: {type(e).__name__}: {e}")
 
