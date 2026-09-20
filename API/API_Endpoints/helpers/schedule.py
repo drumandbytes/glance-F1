@@ -11,7 +11,10 @@ lookup (every extra call eats into the same 500-calls/hour budget the map
 generator already blew through once). Circuits are added to the calendar
 at most once or twice a season; add new ones here when that happens.
 """
+from datetime import datetime
+
 import fastf1
+import pytz
 
 # (Location, Country) as fastf1's own schedule reports them -> circuitId, in
 # the same slug convention scripts/generate_track_maps.py writes static SVGs
@@ -109,8 +112,35 @@ def _row_to_race(row):
 
 def get_season_schedule(year: int) -> list[dict]:
     """Every points-paying race in `year`'s calendar, shaped like the old
-    f1api.dev response (round/raceName/url/schedule/circuit), for
-    current_race_cleaner.py and scripts/generate_track_maps.py to share.
+    f1api.dev response (round/raceName/url/schedule/circuit).
     """
     sched = fastf1.get_event_schedule(year, include_testing=False)
     return [_row_to_race(row) for _, row in sched.iterrows()]
+
+
+def parse_session_datetime(session_data: dict):
+    """UTC-aware datetime for a single {date, time} schedule entry (schedule.py's
+    own raw format, before current_race_cleaner.py's timezone conversion), or
+    None if either half is missing.
+    """
+    date_str = session_data.get("date")
+    time_str = session_data.get("time")
+    if not date_str or not time_str:
+        return None
+    dt = datetime.strptime(f"{date_str}T{time_str}", "%Y-%m-%dT%H:%M:%SZ")
+    return pytz.utc.localize(dt)
+
+
+def find_current_race(races: list[dict], now) -> dict | None:
+    """The first race (by date) whose own race session hasn't started yet -
+    the weekend that's currently up next, or in progress. `races` in
+    get_season_schedule's shape; `now` any timezone-aware datetime (schedule
+    times are always UTC internally, so comparison works regardless of which
+    tz `now` itself is in).
+    """
+    races = sorted(races, key=lambda r: r.get("schedule", {}).get("race", {}).get("date") or "")
+    for race in races:
+        race_dt = parse_session_datetime(race.get("schedule", {}).get("race", {}))
+        if race_dt and race_dt >= now:
+            return race
+    return None

@@ -1,6 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
-from API_Endpoints.helpers.schedule import CIRCUIT_IDS, _row_to_race, _session_dict
+import pytz
+
+from API_Endpoints.helpers.schedule import CIRCUIT_IDS, _row_to_race, _session_dict, find_current_race
 
 
 def test_session_dict_handles_nat():
@@ -58,3 +60,41 @@ def test_circuit_ids_has_both_monaco_spellings():
     # physical circuit across different seasons - both must resolve.
     assert CIRCUIT_IDS[("Monaco", "Monaco")] == "monaco"
     assert CIRCUIT_IDS[("Monte Carlo", "Monaco")] == "monaco"
+
+
+def _raw_session(dt):
+    if dt is None:
+        return {"date": None, "time": None}
+    return {"date": dt.strftime("%Y-%m-%d"), "time": dt.strftime("%H:%M:%SZ")}
+
+
+def _race_with_race_session(race_dt, round_num):
+    return {"round": round_num, "raceName": f"Round {round_num}", "schedule": {"race": _raw_session(race_dt)}}
+
+
+def test_find_current_race_picks_earliest_still_upcoming():
+    now = datetime.now(pytz.UTC)
+    past = _race_with_race_session(now - timedelta(days=10), 1)
+    soon = _race_with_race_session(now + timedelta(days=3), 2)
+    later = _race_with_race_session(now + timedelta(days=10), 3)
+
+    result = find_current_race([later, past, soon], now)
+
+    assert result["round"] == 2
+
+
+def test_find_current_race_none_when_season_is_over():
+    now = datetime.now(pytz.UTC)
+    past = _race_with_race_session(now - timedelta(days=10), 1)
+
+    assert find_current_race([past], now) is None
+
+
+def test_find_current_race_skips_races_missing_a_race_session():
+    now = datetime.now(pytz.UTC)
+    broken = {"round": 1, "raceName": "No schedule", "schedule": {"race": {"date": None, "time": None}}}
+    soon = _race_with_race_session(now + timedelta(days=1), 2)
+
+    result = find_current_race([broken, soon], now)
+
+    assert result["round"] == 2
