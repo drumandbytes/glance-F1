@@ -66,7 +66,7 @@ services:
 | `TRACK_COLOUR` | Yes | Hex colour (e.g. `#e5d486`) for the track-map line. |
 | `EVENT_DETAIL` | No, defaults to `main` | Which sessions `/f1/next_race/` counts down to: `main` (quali + races, skips practice), `race` (races only), or `detailed` (every session). |
 
-Once it's running, grab the widgets you want from [`Glance Widgets/`](./Glance%20Widgets/) - [Next Race](./Glance%20Widgets/Next%20Race/), [Last Race Results](./Glance%20Widgets/Last%20Race/), [Drivers Championship](./Glance%20Widgets/Drivers%20Championship/), and [Constructors Championship](./Glance%20Widgets/Constructors%20Championship/) - and drop them into your Glance config, swapping `${F1_API_URL}` for wherever this container actually lives. The styling is borrowed from [@abaza738](https://github.com/glanceapp/community-widgets/blob/main/widgets/formula1-widgets-by-abaza738/README.md)'s original community widgets; only the API underneath changed. Not every endpoint has a ready-made widget yet (tyre usage doesn't, currently) - any endpoint below works with Glance's `custom-api` widget type if you want to wire up your own. See the [Glance docs](https://github.com/glanceapp/glance/blob/main/docs/configuration.md#including-other-config-files) for how config files like these get included.
+Once it's running, grab the widgets you want from [`widgets/`](./widgets/) and drop them into your Glance config - see that folder's own README for setup and what each one shows. See the [Glance docs](https://github.com/glanceapp/glance/blob/main/docs/configuration.md#including-other-config-files) for how config files like these get included.
 
 # API Reference
 Everything returns JSON except the track map, which is an SVG image.
@@ -94,12 +94,24 @@ pytest
 Three workflows keep this repo honest: [`ci.yml`](./.github/workflows/ci.yml) runs the test suite on every push and PR; [`regenerate-track-maps.yml`](./.github/workflows/regenerate-track-maps.yml) re-renders every circuit's map monthly (or on demand) and opens a PR if anything actually changed; [`release-please.yml`](./.github/workflows/release-please.yml) turns Conventional Commits into a version-bump PR, and merging it tags a release, which [`publish.yml`](./.github/workflows/publish.yml) picks up and builds/pushes to GHCR.
 
 # Demo
-Left is this API driving the widgets. Right is the default community integration they're built on. Same styling - the difference is everything underneath it: local time instead of UTC, a track map, and standings that don't need a decoder ring for team names.
+<table>
+<tr>
+<td width="35%" align="center">
+  <img src="./docs/demo/paddock-api.png" width="100%" />
+</td>
+<td width="65%" valign="top">
 
-<div align="center" >
-  <img src="./Demo Images/glance-f1.png" width="280px" height = "600px" hspace="20px" />
-  <img src="./Demo Images/community-f1.png" width="225px" height = "600px" hspace="20px" />
-</div>
+Same widget styling as the community integration it's built on - the difference is everything underneath it:
+
+- Session times in your own timezone, not UTC
+- A track map, drawn before qualifying even happens - even for a circuit that's never hosted a race
+- Team names simplified to fit a dashboard tile, not "Mercedes-AMG Petronas Formula One Team"
+- Tyre compound and stint length per session, once a race weekend is underway
+- Smart caching keyed to when the data can actually change, not a fixed TTL
+
+</td>
+</tr>
+</table>
 
 # Project Structure
 ```
@@ -125,7 +137,8 @@ paddock-api/
 │           ├── circuit_geometry.py # Static track geometry (bacinger/f1-circuits)
 │           ├── map_generator.py    # Track SVG rendering
 │           └── router.py           # Map endpoint logic
-├── Glance Widgets/                # YAML files for Glance integration
+├── widgets/                       # Glance widget YAMLs, one folder per widget
+├── docs/demo/                     # README screenshots
 ├── .github/
 │   ├── workflows/                 # CI, track-map regeneration, release, publish, auto-merge
 │   └── dependabot.yml
