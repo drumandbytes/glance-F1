@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/drumandbytes/paddock-api/compare/v1.2.1...v1.2.2) (2026-09-21)
+
+
+### Performance Improvements
+
+* **api:** fix cache reads, move blocking Ergast/FastF1 calls to threadpool ([#20](https://github.com/drumandbytes/paddock-api/issues/20)) ([d29b6cb](https://github.com/drumandbytes/paddock-api/commit/d29b6cbb2710139bd024a8317400cd8adddb2e73))
+
 ## [1.2.1](https://github.com/drumandbytes/paddock-api/compare/v1.2.0...v1.2.1) (2026-09-21)
 
 
