@@ -121,7 +121,7 @@ async def get_tyre_usage():
 
     year = datetime.now().year
     try:
-        races = get_season_schedule(year)
+        races = await run_in_threadpool(get_season_schedule, year)
     except Exception as e:
         return {"error": f"Exception while fetching: {e}"}
 

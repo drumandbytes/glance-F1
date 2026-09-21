@@ -2,6 +2,7 @@ from fastapi import APIRouter
 from fastapi_cache import FastAPICache
 from datetime import datetime, timedelta
 import os
+from starlette.concurrency import run_in_threadpool
 
 from .helpers.schedule import get_season_schedule, find_current_race
 from .helpers.time_functions import TZ, MT, convert_to_mt, get_datetime
@@ -20,7 +21,7 @@ async def get_next_race():
 
     year = datetime.now().year
     try:
-        races = get_season_schedule(year)
+        races = await run_in_threadpool(get_season_schedule, year)
     except Exception as e:
         return {"error": f"Exception while fetching: {e}"}
 

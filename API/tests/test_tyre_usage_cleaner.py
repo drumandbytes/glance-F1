@@ -108,6 +108,40 @@ def test_tyre_usage_for_weekend_skips_future_and_tolerates_a_failed_session(monk
     assert result["sessions"]["race"] is None
 
 
+async def test_get_tyre_usage_dispatches_schedule_and_usage_to_threadpool(monkeypatch):
+    now = datetime.now(pytz.UTC)
+    race = {
+        "round": 15,
+        "raceName": "Test Grand Prix",
+        "schedule": {"race": _raw_session(now + timedelta(days=1))},
+    }
+    response = {"season": now.year, "round": 15, "raceName": "Test Grand Prix", "sessions": {}}
+    calls = []
+
+    def fake_schedule(year):
+        return [race]
+
+    def fake_usage(selected_race):
+        assert selected_race == dict(race, season=now.year)
+        return response
+
+    async def fake_threadpool(func, *args, **kwargs):
+        calls.append((func, args, kwargs))
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(tyre_usage, "get_season_schedule", fake_schedule)
+    monkeypatch.setattr(tyre_usage, "_tyre_usage_for_weekend", fake_usage)
+    monkeypatch.setattr(tyre_usage, "run_in_threadpool", fake_threadpool)
+
+    result = await tyre_usage.get_tyre_usage()
+
+    assert calls == [
+        (fake_schedule, (now.year,), {}),
+        (fake_usage, (dict(race, season=now.year),), {}),
+    ]
+    assert result == response
+
+
 async def test_get_tyre_usage_returns_message_when_no_current_race(monkeypatch):
     monkeypatch.setattr(tyre_usage, "get_season_schedule", lambda year: [])
 
