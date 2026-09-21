@@ -97,7 +97,7 @@ Three workflows keep this repo honest: [`ci.yml`](./.github/workflows/ci.yml) ru
 Left is this API driving the widgets. Right is the default community integration they're built on. Same styling - the difference is everything underneath it: local time instead of UTC, a track map, and standings that don't need a decoder ring for team names.
 
 <div align="center" >
-  <img src="./Demo Images/glance-f1.png" width="225px" height = "600px" hspace="20px" />
+  <img src="./Demo Images/glance-f1.png" width="280px" height = "600px" hspace="20px" />
   <img src="./Demo Images/community-f1.png" width="225px" height = "600px" hspace="20px" />
 </div>
 
