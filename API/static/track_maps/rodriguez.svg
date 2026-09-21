@@ -3,19 +3,14 @@
         .track-outline {
             fill: transparent;
             stroke: black;
-            stroke-width: 56;
+            stroke-width: 19.121052899011538;
             stroke-linecap: round;
             stroke-linejoin: round;
-        }
-        @media (prefers-color-scheme: dark) {
-            .track-outline {
-                stroke: white;
-            }
         }
         .track-line {
             fill: transparent;
             stroke: #e5d486;
-            stroke-width: 40;
+            stroke-width: 12.747368599341028;
             stroke-linecap: round;
             stroke-linejoin: round;
             title: Autódromo Hermanos Rodríguez;
