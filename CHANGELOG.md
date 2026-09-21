@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/drumandbytes/paddock-api/compare/v1.2.0...v1.2.1) (2026-09-21)
+
+
+### Bug Fixes
+
+* track map stroke width and outline visibility ([#15](https://github.com/drumandbytes/paddock-api/issues/15)) ([b098f63](https://github.com/drumandbytes/paddock-api/commit/b098f630c7a06428d0e4eae01fba63125a9a40f7))
+
 ## [1.2.0](https://github.com/drumandbytes/paddock-api/compare/v1.1.0...v1.2.0) (2026-09-20)
 
 
