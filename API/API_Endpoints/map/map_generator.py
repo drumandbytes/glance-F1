@@ -68,31 +68,33 @@ def render_track_svg(coordinates, track_name: str = None) -> str:
                            viewBox=f"0 0 {viewbox_width} {viewbox_height}",
                            preserveAspectRatio="xMidYMid meet")
 
-    # A single track_color line reads fine on whichever background it was
-    # tuned against, but disappears on the other one (e.g. a light track
-    # color against a light dashboard theme). Draw a wider black/white
-    # border underneath it instead - black on a light background, white on
-    # a dark one - so the outline stays visible either way regardless of
-    # what track_color itself is.
+    # Stroke width as a fraction of the viewbox's own smaller dimension,
+    # not a fixed absolute number - self-calibrates per circuit instead of
+    # looking too thick on a physically compact track (lots of corners
+    # folded into a small bounding box) and too thin on a sprawling one.
+    min_dim = min(viewbox_width, viewbox_height)
+    track_width = min_dim * 0.012
+    outline_width = min_dim * 0.018
+
+    # Plain black outline, not a light/dark-mode-aware one: this SVG is
+    # loaded via a bare <img src>, isolated from Glance's own page, so
+    # prefers-color-scheme reflects the OS/browser's setting, not Glance's
+    # own (independently configurable, not OS-linked) theme - tried that,
+    # confirmed it doesn't track Glance's actual dark theme in practice.
     outline_class = 'track-outline'
     track_class = 'track-line'
     dwg.defs.add(dwg.style(f"""
         .{outline_class} {{
             fill: transparent;
             stroke: black;
-            stroke-width: 56;
+            stroke-width: {outline_width};
             stroke-linecap: round;
             stroke-linejoin: round;
-        }}
-        @media (prefers-color-scheme: dark) {{
-            .{outline_class} {{
-                stroke: white;
-            }}
         }}
         .{track_class} {{
             fill: transparent;
             stroke: {track_color};
-            stroke-width: 40;
+            stroke-width: {track_width};
             stroke-linecap: round;
             stroke-linejoin: round;
             title: {track_name};

@@ -3,19 +3,14 @@
         .track-outline {
             fill: transparent;
             stroke: black;
-            stroke-width: 56;
+            stroke-width: 17.45515719480969;
             stroke-linecap: round;
             stroke-linejoin: round;
-        }
-        @media (prefers-color-scheme: dark) {
-            .track-outline {
-                stroke: white;
-            }
         }
         .track-line {
             fill: transparent;
             stroke: #e5d486;
-            stroke-width: 40;
+            stroke-width: 11.636771463206461;
             stroke-linecap: round;
             stroke-linejoin: round;
             title: Sepang International Circuit;

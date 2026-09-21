@@ -3,19 +3,14 @@
         .track-outline {
             fill: transparent;
             stroke: black;
-            stroke-width: 56;
+            stroke-width: 26.52273627006322;
             stroke-linecap: round;
             stroke-linejoin: round;
-        }
-        @media (prefers-color-scheme: dark) {
-            .track-outline {
-                stroke: white;
-            }
         }
         .track-line {
             fill: transparent;
             stroke: #e5d486;
-            stroke-width: 40;
+            stroke-width: 17.68182418004215;
             stroke-linecap: round;
             stroke-linejoin: round;
             title: Albert Park Circuit;

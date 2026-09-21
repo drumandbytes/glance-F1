@@ -3,19 +3,14 @@
         .track-outline {
             fill: transparent;
             stroke: black;
-            stroke-width: 56;
+            stroke-width: 10.805300488001537;
             stroke-linecap: round;
             stroke-linejoin: round;
-        }
-        @media (prefers-color-scheme: dark) {
-            .track-outline {
-                stroke: white;
-            }
         }
         .track-line {
             fill: transparent;
             stroke: #e5d486;
-            stroke-width: 40;
+            stroke-width: 7.203533658667691;
             stroke-linecap: round;
             stroke-linejoin: round;
             title: Jeddah Corniche Circuit;

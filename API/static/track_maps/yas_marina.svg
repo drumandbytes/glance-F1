@@ -3,19 +3,14 @@
         .track-outline {
             fill: transparent;
             stroke: black;
-            stroke-width: 56;
+            stroke-width: 14.84309240642309;
             stroke-linecap: round;
             stroke-linejoin: round;
-        }
-        @media (prefers-color-scheme: dark) {
-            .track-outline {
-                stroke: white;
-            }
         }
         .track-line {
             fill: transparent;
             stroke: #e5d486;
-            stroke-width: 40;
+            stroke-width: 9.895394937615395;
             stroke-linecap: round;
             stroke-linejoin: round;
             title: Yas Marina Circuit;
