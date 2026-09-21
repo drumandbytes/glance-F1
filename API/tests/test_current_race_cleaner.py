@@ -40,6 +40,28 @@ def _race(race_dt=None, qualy_dt=None, fp1_dt=None, fp2_dt=None, fp3_dt=None,
     }
 
 
+async def test_schedule_fetch_uses_threadpool_and_preserves_output(monkeypatch):
+    now = datetime.now(pytz.UTC)
+    race = _race(race_dt=now + timedelta(days=2), qualy_dt=now + timedelta(days=1))
+    calls = []
+
+    def fake_schedule(year):
+        return [race]
+
+    async def fake_threadpool(func, *args, **kwargs):
+        calls.append((func, args, kwargs))
+        return func(*args, **kwargs)
+
+    monkeypatch.setattr(crc, "get_season_schedule", fake_schedule)
+    monkeypatch.setattr(crc, "run_in_threadpool", fake_threadpool)
+
+    result = await crc.get_next_race()
+
+    assert calls == [(fake_schedule, (result["season"],), {})]
+    assert result["race"] == [race]
+    assert result["next_event"]["session"] == "Qualifying"
+
+
 async def test_next_event_skips_practice_sessions_in_main_detail(monkeypatch):
     # EVENT_DETAIL defaults to "main" (conftest.py)
     now = datetime.now(pytz.UTC)

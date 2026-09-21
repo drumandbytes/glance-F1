@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 
 from fastf1.ergast import Ergast
+from starlette.concurrency import run_in_threadpool
 
 from .helpers.functions import country_to_code
 from .helpers.global_vars import nationality_map
@@ -35,7 +36,7 @@ async def get_last_race():
 
     ergast = Ergast()
     try:
-        res = ergast.get_race_results(season="current", round="last")
+        res = await run_in_threadpool(ergast.get_race_results, season="current", round="last")
         race_info = res.description.iloc[0]
         driver_results = res.content[0]
     except Exception as e:

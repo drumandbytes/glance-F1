@@ -3,6 +3,7 @@ from fastapi_cache import FastAPICache
 from datetime import datetime
 
 from fastf1.ergast import Ergast
+from starlette.concurrency import run_in_threadpool
 
 from .helpers.functions import country_to_code, format_team_name
 from .helpers.global_vars import nationality_map
@@ -15,9 +16,13 @@ async def get_drivers_championship():
     cache = FastAPICache.get_backend()
     cache_key = "drivers_championship"
 
+    cached = await cache.get(cache_key)
+    if cached:
+        return cached
+
     season = datetime.now(MT).year
     ergast = Ergast()
-    standings = ergast.get_driver_standings(season = season)
+    standings = await run_in_threadpool(ergast.get_driver_standings, season=season)
     standing_data = standings.content[0]
 
     results = []
