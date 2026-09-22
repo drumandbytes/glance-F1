@@ -1,34 +1,8 @@
-"""Season schedule, sourced from fastf1's own event schedule rather than
-f1api.dev - it's the only source that correctly models Sprint Qualifying as
-its own session (Ergast's classic schema predates that format and has no
-field for it at all), and current_race_cleaner.py already found a real bug
-in f1api.dev's round numbering it had to hand-patch around. One less
-external dependency, one fewer thing that can silently drift wrong.
-
-fastf1's schedule has no circuitId equivalent, unlike f1api.dev/Ergast -
-CIRCUIT_IDS below is a static table instead of a second live API call per
-lookup (every extra call eats into the same 500-calls/hour budget the map
-generator already blew through once). Circuits are added to the calendar
-at most once or twice a season; add new ones here when that happens.
-"""
 from datetime import datetime
 
-import fastf1
 import pytz
+from ..data_sources import fetch_season_schedule
 
-# (Location, Country) as fastf1's own schedule reports them -> circuitId, in
-# the same slug convention scripts/generate_track_maps.py writes static SVGs
-# under. Built by joining fastf1's 2025+2026 schedules against Ergast's
-# get_race_schedule() by round number (matching on Location/Country string
-# directly doesn't work - the two sources spell some of them differently,
-# e.g. Ergast's "Montreal" vs fastf1's "Montréal"). Multiple entries per
-# circuit are intentional: fastf1's own Location/Country strings for the
-# same physical circuit have already been observed to drift between
-# seasons (2025 "Yas Island" vs 2026 "Yas Marina", "Monaco" vs "Monte
-# Carlo") - not a typo, both are real, keep both when it happens again.
-# 2026's Malaysia entry reports Country "Bahrain" in fastf1's own schedule
-# (a real upstream data quirk, not ours to fix) - included as-is because
-# that's what a live lookup will actually see.
 CIRCUIT_IDS = {
     ("Melbourne", "Australia"): "albert_park",
     ("Shanghai", "China"): "shanghai",
@@ -61,10 +35,6 @@ CIRCUIT_IDS = {
     ("Yas Marina", "United Arab Emirates"): "yas_marina",
 }
 
-# fastf1's 5 generic session slots are named per event; map the name to the
-# fixed keys the rest of this app (and the Glance dashboard's own template)
-# already expects. "Sprint Shootout" was F1's 2023-only name for what's now
-# called Sprint Qualifying - kept for older-season lookups.
 _SESSION_NAME_TO_KEY = {
     "Practice 1": "fp1",
     "Practice 2": "fp2",
@@ -85,44 +55,93 @@ def _session_dict(dt):
     return {"date": dt.strftime("%Y-%m-%d"), "time": dt.strftime("%H:%M:%SZ")}
 
 
-def _row_to_race(row):
+async def get_season_schedule(year: int) -> list[dict]:
+    """Fetch season schedule from Ergast (still the most reliable for schedules)."""
+    races = await fetch_season_schedule(year)
+    
+    result = []
+    for idx, race in enumerate(races, start=1):
+        race_obj = _ergast_race_to_race(race, idx)
+        result.append(race_obj)
+    
+    return result
+
+
+def _ergast_race_to_race(race_data: dict, round_number: int) -> dict:
+    """Convert Ergast race format to our internal format."""
     schedule = {key: dict(_EMPTY_SESSION) for key in _SESSION_NAME_TO_KEY.values()}
-    for i in range(1, 6):
-        name = row.get(f"Session{i}")
-        key = _SESSION_NAME_TO_KEY.get(name)
-        if key:
-            schedule[key] = _session_dict(row.get(f"Session{i}DateUtc"))
-
-    circuit_id = CIRCUIT_IDS.get((row["Location"], row["Country"]))
-
+    
+    date_str = race_data.get("date", "")
+    time_str = race_data.get("time", "")
+    
+    schedule["race"] = {
+        "date": date_str,
+        "time": time_str,
+    }
+    
+    fp1 = race_data.get("FirstPractice", {})
+    if fp1 and fp1.get("date") and fp1.get("time"):
+        dt = datetime.fromisoformat(f"{fp1['date']}T{fp1['time']}".replace("Z", "+00:00"))
+        schedule["fp1"] = {
+            "date": dt.strftime("%Y-%m-%d"),
+            "time": dt.strftime("%H:%M:%SZ")
+        }
+    
+    fp2 = race_data.get("SecondPractice", {})
+    if fp2 and fp2.get("date") and fp2.get("time"):
+        dt = datetime.fromisoformat(f"{fp2['date']}T{fp2['time']}".replace("Z", "+00:00"))
+        schedule["fp2"] = {
+            "date": dt.strftime("%Y-%m-%d"),
+            "time": dt.strftime("%H:%M:%SZ")
+        }
+    
+    fp3 = race_data.get("ThirdPractice", {})
+    if fp3 and fp3.get("date") and fp3.get("time"):
+        dt = datetime.fromisoformat(f"{fp3['date']}T{fp3['time']}".replace("Z", "+00:00"))
+        schedule["fp3"] = {
+            "date": dt.strftime("%Y-%m-%d"),
+            "time": dt.strftime("%H:%M:%SZ")
+        }
+    
+    qualy = race_data.get("Qualifying", {})
+    if qualy and qualy.get("date") and qualy.get("time"):
+        dt = datetime.fromisoformat(f"{qualy['date']}T{qualy['time']}".replace("Z", "+00:00"))
+        schedule["qualy"] = {
+            "date": dt.strftime("%Y-%m-%d"),
+            "time": dt.strftime("%H:%M:%SZ")
+        }
+    
+    sprint = race_data.get("Sprint", {})
+    if sprint and sprint.get("date") and sprint.get("time"):
+        dt = datetime.fromisoformat(f"{sprint['date']}T{sprint['time']}".replace("Z", "+00:00"))
+        schedule["sprintRace"] = {
+            "date": dt.strftime("%Y-%m-%d"),
+            "time": dt.strftime("%H:%M:%SZ")
+        }
+    
+    circuit = race_data.get("Circuit", {})
+    location = circuit.get("Location", {})
+    country = location.get("country", "")
+    circuit_name = circuit.get("circuitName", "")
+    circuit_id = CIRCUIT_IDS.get((location.get("locality", ""), country))
+    
     return {
-        "round": int(row["RoundNumber"]),
-        "raceName": row["EventName"],
-        "url": None,  # fastf1's schedule carries no wiki link, unlike f1api.dev/Ergast
+        "round": round_number,
+        "raceName": race_data.get("raceName", ""),
+        "url": circuit.get("url"),
         "schedule": schedule,
         "circuit": {
             "circuitId": circuit_id,
-            "circuitName": row["OfficialEventName"] or row["EventName"],
-            "url": None,
-            "country": row["Country"],
-            "city": row["Location"],
+            "circuitName": circuit_name,
+            "url": circuit.get("url"),
+            "country": country,
+            "city": location.get("locality", ""),
         },
     }
 
 
-def get_season_schedule(year: int) -> list[dict]:
-    """Every points-paying race in `year`'s calendar, shaped like the old
-    f1api.dev response (round/raceName/url/schedule/circuit).
-    """
-    sched = fastf1.get_event_schedule(year, include_testing=False)
-    return [_row_to_race(row) for _, row in sched.iterrows()]
-
-
 def parse_session_datetime(session_data: dict):
-    """UTC-aware datetime for a single {date, time} schedule entry (schedule.py's
-    own raw format, before current_race_cleaner.py's timezone conversion), or
-    None if either half is missing.
-    """
+    """UTC-aware datetime for a single {date, time} schedule entry."""
     date_str = session_data.get("date")
     time_str = session_data.get("time")
     if not date_str or not time_str:
@@ -132,15 +151,11 @@ def parse_session_datetime(session_data: dict):
 
 
 def find_current_race(races: list[dict], now) -> dict | None:
-    """The first race (by date) whose own race session hasn't started yet -
-    the weekend that's currently up next, or in progress. `races` in
-    get_season_schedule's shape; `now` any timezone-aware datetime (schedule
-    times are always UTC internally, so comparison works regardless of which
-    tz `now` itself is in).
-    """
+    """Find the first race whose race session hasn't started yet."""
     races = sorted(races, key=lambda r: r.get("schedule", {}).get("race", {}).get("date") or "")
     for race in races:
         race_dt = parse_session_datetime(race.get("schedule", {}).get("race", {}))
         if race_dt and race_dt >= now:
             return race
     return None
+

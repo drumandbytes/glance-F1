@@ -1,88 +1,77 @@
-from fastapi import APIRouter
-from fastapi_cache import FastAPICache
 from datetime import datetime, timedelta
-import pandas as pd
 
-from fastf1.ergast import Ergast
-from starlette.concurrency import run_in_threadpool
-
+from .data_sources import fetch_race_results
 from .helpers.functions import country_to_code
-from .helpers.global_vars import nationality_map
+from .helpers.global_vars import nationality_map, default_expire
 from .helpers.time_functions import MT
+from .cache import cache_manager
 
-router = APIRouter()
-
-
-def format_time(total_race_time, is_winner: bool):
-    if pd.isna(total_race_time):
+def format_time(total_race_time: str, is_winner: bool) -> str:
+    if not total_race_time or total_race_time == "":
         return None
-    total_seconds = total_race_time.total_seconds()
+    
+    try:
+        total_seconds = float(total_race_time)
+    except (ValueError, TypeError):
+        return None
+    
     if not is_winner:
         return f"+{total_seconds:.3f}"
+    
     h, rem = divmod(int(total_seconds), 3600)
     m, s = divmod(rem, 60)
     ms = int(round((total_seconds - int(total_seconds)) * 1000))
     return f"{h}:{m:02d}:{s:02d}.{ms:03d}" if h else f"{m}:{s:02d}.{ms:03d}"
 
-
-@router.get("/", summary="Fetch last race results")
-async def get_last_race():
-    cache = FastAPICache.get_backend()
+async def get_last_race(request):
+    cache = cache_manager
     cache_key = "f1:last_race"
 
     cached = await cache.get(cache_key)
     if cached:
         return cached
 
-    ergast = Ergast()
     try:
-        res = await run_in_threadpool(ergast.get_race_results, season="current", round="last")
-        race_info = res.description.iloc[0]
-        driver_results = res.content[0]
+        race_info, results = await fetch_race_results("current", "last")
+        
+        if not race_info:
+            return {"error": "Could not fetch last race"}
+
+        formatted_results = []
+        for result in results:
+            nationality = result.get("Driver", {}).get("nationality", "")
+            if nationality in nationality_map:
+                nationality = nationality_map[nationality]
+
+            is_dnf = not str(result.get("position", "")).isdigit()
+            surname = result.get("Driver", {}).get("familyName", "")
+
+            if is_dnf:
+                laps = result.get("laps", "")
+                time_str = f"DNF ({laps})" if laps else "DNF"
+            else:
+                time_str = format_time(result.get("Time"), result.get("position") == "1")
+
+            formatted_results.append({
+                "position": result.get("position"),
+                "surname": surname,
+                "flag": country_to_code(nationality),
+                "teamId": result.get("Constructor", {}).get("constructorId", ""),
+                "time": time_str,
+                "dnf_laps": int(result.get("laps", 0)) if is_dnf and result.get("laps") else None,
+            })
+
+        response_data = {
+            "season": race_info.get("season"),
+            "round": race_info.get("round"),
+            "raceName": race_info.get("raceName"),
+            "date": race_info.get("raceDate"),
+            "cache_expires": (datetime.now(MT) + timedelta(days=1)).isoformat(),
+            "results": formatted_results,
+        }
+
+        await cache.set(cache_key, response_data, expire=default_expire)
+        return response_data
+
     except Exception as e:
         return {"error": f"Exception while fetching: {e}"}
-
-    results = []
-    for _, row in driver_results.iterrows():
-        nationality = row.get("driverNationality", "")
-        if nationality in nationality_map:
-            nationality = nationality_map[nationality]
-
-        # positionText is non-numeric ("R" retired, "D" disqualified, etc.)
-        # for anyone not classified with a normal finish - a numeric
-        # positionText still applies to a car that finished a lap down, so
-        # this isn't the same check as "did they finish on the lead lap".
-        is_dnf = not str(row.get("positionText")).isdigit()
-        surname = row.get("familyName")
-        if surname == "Kimi Antonelli":
-            surname = "Antonelli"
-
-        if is_dnf:
-            laps = row.get("laps")
-            time_str = f"DNF ({int(laps)})" if pd.notna(laps) else "DNF"
-        else:
-            time_str = format_time(row.get("totalRaceTime"), row.get("position") == 1)
-
-        results.append({
-            "position": row.get("position"),
-            "surname": surname,
-            "flag": country_to_code(nationality),
-            "teamId": row.get("constructorId"),
-            "time": time_str,
-            "dnf_laps": int(row["laps"]) if is_dnf and pd.notna(row.get("laps")) else None,
-        })
-
-    expire = 86400
-    expiry_dt = datetime.now(MT) + timedelta(days=1)
-
-    response_data = {
-        "season": int(race_info["season"]),
-        "round": int(race_info["round"]),
-        "raceName": race_info["raceName"],
-        "date": race_info["raceDate"].strftime("%Y-%m-%d") if pd.notna(race_info["raceDate"]) else None,
-        "cache_expires": expiry_dt.isoformat(),
-        "results": results,
-    }
-
-    await cache.set(cache_key, response_data, expire=expire)
-    return response_data

@@ -1,51 +1,46 @@
-from fastapi import APIRouter
-from fastapi_cache import FastAPICache
 from datetime import datetime
 
-from fastf1.ergast import Ergast
-from starlette.concurrency import run_in_threadpool
-
+from .data_sources import fetch_constructor_standings
 from .helpers.functions import country_to_code
 from .helpers.global_vars import nationality_map
 from .helpers.time_functions import MT
+from .cache import cache_manager
 
-router = APIRouter()
-
-@router.get("/", summary="Fetch current constructors championship")
-async def get_constructors_championship():
-    cache = FastAPICache.get_backend()
+async def get_constructors_championship(request):
     cache_key = "constructors_championship"
-
-    cached = await cache.get(cache_key)
+    cached = await cache_manager.get(cache_key)
     if cached:
         return cached
 
-    season = datetime.now(MT).year
-    ergast = Ergast()
-    standings = await run_in_threadpool(ergast.get_constructor_standings, season=season)
-    standing_data = standings.content[0]
+    try:
+        season = datetime.now(MT).year
+        standing_data = await fetch_constructor_standings(season)
+        
+        results = []
+        for standing in standing_data.get("ConstructorStandings", []):
+            constructor = standing.get("Constructor", {})
+            nationality = constructor.get("nationality", "")
+            
+            if nationality in nationality_map:
+                nationality = nationality_map[nationality]
+            
+            results.append({
+                "team": constructor.get("name", ""),
+                "position": int(standing.get("position", 0)),
+                "points": int(standing.get("points", 0)),
+                "wins": int(standing.get("wins", 0)),
+                "country": nationality,
+                "flag": country_to_code(nationality),
+                "wiki": constructor.get("url", "")
+            })
 
-    results = []
-    for _, row in standing_data.iterrows():
-        if row["constructorNationality"] in nationality_map:
-            row["constructorNationality"] = nationality_map[row["constructorNationality"]]
-        else:
-            row["constructorNationality"] = ""
+        response_data = {
+            "season": season,
+            "constructors": results
+        }
 
-        results.append({
-            "team": row["constructorName"],
-            "position": row["position"],
-            "points": row["points"],
-            "wins": row["wins"],
-            "country": row["constructorNationality"],
-            "flag": country_to_code(row["constructorNationality"]),
-            "wiki": row["constructorUrl"]
-        })
-
-
-    response_data = {
-        "season": season, 
-        "constructors": results}
-
-    await cache.set(cache_key, response_data, expire=600)
-    return response_data
+        await cache_manager.set(cache_key, response_data, expire=600)
+        return response_data
+    
+    except Exception as e:
+        return {"error": str(e)}

@@ -1,27 +1,21 @@
-from fastapi import APIRouter
-from fastapi_cache import FastAPICache
 from datetime import datetime, timedelta
 import os
-from starlette.concurrency import run_in_threadpool
 
 from .helpers.schedule import get_season_schedule, find_current_race
 from .helpers.time_functions import TZ, MT, convert_to_mt, get_datetime
 from .helpers.global_vars import default_expire
+from .cache import cache_manager
 
-router = APIRouter()
-
-@router.get("/", summary="Fetch next race")
-async def get_next_race():
-    cache = FastAPICache.get_backend()
+async def get_next_race(request):
     cache_key = "f1:next_race"
 
-    cached = await cache.get(cache_key)
+    cached = await cache_manager.get(cache_key)
     if cached:
         return cached
 
     year = datetime.now().year
     try:
-        races = await run_in_threadpool(get_season_schedule, year)
+        races = await get_season_schedule(year)
     except Exception as e:
         return {"error": f"Exception while fetching: {e}"}
 
@@ -31,7 +25,6 @@ async def get_next_race():
     if not next_race:
         return {"message": "No upcoming race found"}
 
-    # Convert schedule times
     schedule = next_race.get("schedule", {})
     for session, val in schedule.items():
         if val["date"] and val["time"]:
@@ -56,7 +49,7 @@ async def get_next_race():
 
     next_event = None
     try:
-        detail_level = os.environ.get("EVENT_DETAIL").strip()
+        detail_level = os.environ.get("EVENT_DETAIL", "main").strip()
     except Exception:
         detail_level = 'main'
 
@@ -91,7 +84,6 @@ async def get_next_race():
         except Exception:
             continue
 
-    # Cache expiry logic based on race time
     now = datetime.now(MT)
 
     race_session = next_race.get("schedule", {}).get("race")
@@ -105,7 +97,6 @@ async def get_next_race():
         try:
             next_event_dt = datetime.fromisoformat(next_event["datetime"])
             if next_event_dt > now:
-                # Cache until next session starts
                 expire = max(1, int((next_event_dt - now).total_seconds()))
                 expiry_dt = next_event_dt
             else:
@@ -117,18 +108,15 @@ async def get_next_race():
 
     elif race_dt:
         if now < race_dt + timedelta(hours=1):
-            # Race just ended, wait minimum of 1 hour
             expiry_dt = race_dt + timedelta(hours=1)
             expire = int((expiry_dt - now).total_seconds())
         else:
-            # 1 hour after race, poll every hour
             expire = default_expire
             expiry_dt = now + timedelta(seconds=expire)
     else:
         expire = default_expire
         expiry_dt = now + timedelta(seconds=expire)
 
-    # Output data
     response_data = {
         "season": year,
         "round": calendar_round,
@@ -138,5 +126,5 @@ async def get_next_race():
         "race": [next_race]
     }
 
-    await cache.set(cache_key, response_data, expire=expire)
+    await cache_manager.set(cache_key, response_data, expire=expire)
     return response_data
