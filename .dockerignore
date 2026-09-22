@@ -1,0 +1,13 @@
+paddock-api
+*.test
+coverage.out
+.git/
+.gitignore
+docs/
+widgets/
+.github/
+README.md
+CHANGELOG.md
+LICENSE
+docker-compose.yaml
+!static/

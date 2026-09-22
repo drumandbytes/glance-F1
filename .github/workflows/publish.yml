@@ -37,8 +37,8 @@ jobs:
 
       - uses: docker/build-push-action@v7
         with:
-          context: API
-          file: API/Dockerfile
+          context: .
+          file: Dockerfile
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

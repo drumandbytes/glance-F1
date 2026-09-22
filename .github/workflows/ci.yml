@@ -10,27 +10,43 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-go@v6
         with:
-          python-version: "3.11"
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
 
-      - name: Install dependencies
-        working-directory: API
-        run: pip install --no-cache-dir -r requirements-dev.txt
+      - name: Check formatting
+        run: test -z "$(gofmt -l .)"
 
-      - name: Run tests
-        working-directory: API
-        run: pytest
+      - name: Run contract tests
+        run: go test ./...
+
+      - name: Run vet
+        run: go vet ./...
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          push: false
 
   # Single stable name for the org's required-status-check ruleset
   # (protecting-main) to point at, regardless of how the real jobs above are
   # split or renamed - see drumandbytes/reusable-actions' own ci.yml, which
-  # this mirrors (no off-the-shelf reusable workflow in that repo fits a
-  # plain Python service, so this is defined directly here instead).
+  # this mirrors (no off-the-shelf reusable workflow in that repo fits this
+  # service, so this is defined directly here instead).
   required-checks-passed:
     name: Required checks passed
     runs-on: ubuntu-latest
-    needs: [test]
+    needs: [test, build]
     if: always()
     steps:
       - if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
