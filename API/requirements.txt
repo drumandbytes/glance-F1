@@ -1,5 +1,0 @@
-starlette
-httpx
-pytz
-pycountry
-svgwrite
