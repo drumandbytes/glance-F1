@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from starlette.responses import JSONResponse
 
 from .data_sources import fetch_race_results
 from .helpers.functions import country_to_code
@@ -24,18 +25,16 @@ def format_time(total_race_time: str, is_winner: bool) -> str:
     return f"{h}:{m:02d}:{s:02d}.{ms:03d}" if h else f"{m}:{s:02d}.{ms:03d}"
 
 async def get_last_race(request):
-    cache = cache_manager
     cache_key = "f1:last_race"
-
-    cached = await cache.get(cache_key)
+    cached = await cache_manager.get(cache_key)
     if cached:
-        return cached
+        return JSONResponse(cached)
 
     try:
         race_info, results = await fetch_race_results("current", "last")
         
         if not race_info:
-            return {"error": "Could not fetch last race"}
+            return JSONResponse({"error": "Could not fetch last race"}, status_code=500)
 
         formatted_results = []
         for result in results:
@@ -70,8 +69,8 @@ async def get_last_race(request):
             "results": formatted_results,
         }
 
-        await cache.set(cache_key, response_data, expire=default_expire)
-        return response_data
+        await cache_manager.set(cache_key, response_data, expire=default_expire)
+        return JSONResponse(response_data)
 
     except Exception as e:
-        return {"error": f"Exception while fetching: {e}"}
+        return JSONResponse({"error": f"Exception while fetching: {e}"}, status_code=500)

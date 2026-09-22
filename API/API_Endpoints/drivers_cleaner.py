@@ -1,4 +1,5 @@
 from datetime import datetime
+from starlette.responses import JSONResponse
 
 from .data_sources import fetch_driver_standings
 from .helpers.functions import country_to_code, format_team_name
@@ -10,7 +11,7 @@ async def get_drivers_championship(request):
     cache_key = "drivers_championship"
     cached = await cache_manager.get(cache_key)
     if cached:
-        return cached
+        return JSONResponse(cached)
 
     try:
         season = datetime.now(MT).year
@@ -40,7 +41,7 @@ async def get_drivers_championship(request):
         }
 
         await cache_manager.set(cache_key, response_data, expire=600)
-        return response_data
+        return JSONResponse(response_data)
     
     except Exception as e:
-        return {"error": str(e)}
+        return JSONResponse({"error": str(e)}, status_code=500)

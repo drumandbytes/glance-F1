@@ -1,4 +1,5 @@
 from datetime import datetime
+from starlette.responses import JSONResponse
 
 from .data_sources import fetch_constructor_standings
 from .helpers.functions import country_to_code
@@ -10,7 +11,7 @@ async def get_constructors_championship(request):
     cache_key = "constructors_championship"
     cached = await cache_manager.get(cache_key)
     if cached:
-        return cached
+        return JSONResponse(cached)
 
     try:
         season = datetime.now(MT).year
@@ -40,7 +41,7 @@ async def get_constructors_championship(request):
         }
 
         await cache_manager.set(cache_key, response_data, expire=600)
-        return response_data
+        return JSONResponse(response_data)
     
     except Exception as e:
-        return {"error": str(e)}
+        return JSONResponse({"error": str(e)}, status_code=500)

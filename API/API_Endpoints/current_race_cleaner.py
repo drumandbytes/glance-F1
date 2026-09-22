@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import os
+from starlette.responses import JSONResponse
 
 from .helpers.schedule import get_season_schedule, find_current_race
 from .helpers.time_functions import TZ, MT, convert_to_mt, get_datetime
@@ -11,19 +12,19 @@ async def get_next_race(request):
 
     cached = await cache_manager.get(cache_key)
     if cached:
-        return cached
+        return JSONResponse(cached)
 
     year = datetime.now().year
     try:
         races = await get_season_schedule(year)
     except Exception as e:
-        return {"error": f"Exception while fetching: {e}"}
+        return JSONResponse({"error": f"Exception while fetching: {e}"}, status_code=500)
 
     now = datetime.now(MT)
     next_race = find_current_race(races, now)
 
     if not next_race:
-        return {"message": "No upcoming race found"}
+        return JSONResponse({"message": "No upcoming race found"})
 
     schedule = next_race.get("schedule", {})
     for session, val in schedule.items():
@@ -127,4 +128,4 @@ async def get_next_race(request):
     }
 
     await cache_manager.set(cache_key, response_data, expire=expire)
-    return response_data
+    return JSONResponse(response_data)
