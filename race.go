@@ -59,10 +59,10 @@ func (a *app) lastRace(c echo.Context) error {
 		MRData struct {
 			RaceTable struct {
 				Races []struct {
-					Season         json.Number `json:"season"`
-					Round          json.Number `json:"round"`
-					RaceName, Date string
-					Results        []struct {
+					Season              json.Number `json:"season"`
+					Round               json.Number `json:"round"`
+					RaceName, URL, Date string
+					Results             []struct {
 						Position     json.Number `json:"position"`
 						PositionText string      `json:"positionText"`
 						Laps         json.Number `json:"laps"`
@@ -105,10 +105,10 @@ func (a *app) lastRace(c echo.Context) error {
 			surname = "Antonelli"
 		}
 		country := normalizeNationality(item.Driver.Nationality)
-		results = append(results, map[string]any{"position": numberInt(item.Position), "surname": surname, "flag": countryCodes[country], "teamId": item.Constructor.ID, "time": raceTime, "dnf_laps": dnfLaps})
+		results = append(results, map[string]any{"position": numberInt(item.Position), "surname": surname, "country": country, "flag": countryCodes[country], "teamId": item.Constructor.ID, "time": raceTime, "dnf_laps": dnfLaps})
 	}
 	expires := a.now().Add(24 * time.Hour)
-	result := map[string]any{"season": numberInt(raceData.Season), "round": numberInt(raceData.Round), "raceName": raceData.RaceName, "date": nullableString(raceData.Date), "cache_expires": formatRFC3339(expires), "results": results}
+	result := map[string]any{"season": numberInt(raceData.Season), "round": numberInt(raceData.Round), "raceName": raceData.RaceName, "url": nullableString(raceData.URL), "date": nullableString(raceData.Date), "cache_expires": formatRFC3339(expires), "results": results}
 	a.cache.set("f1:last_race", result, expires)
 	return c.JSON(http.StatusOK, result)
 }

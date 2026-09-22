@@ -36,7 +36,7 @@ func newUpstreamMock(t *testing.T) *upstreamMock {
 		case "/ergast/2026/constructorStandings.json":
 			io.WriteString(w, `{"MRData":{"StandingsTable":{"StandingsLists":[{"ConstructorStandings":[{"position":1,"points":150,"wins":3,"country":"Great Britain","flag":"gb","Constructor":{"name":"McLaren","nationality":"British","url":"https://example.test/mclaren"}}]}]}}}`)
 		case "/ergast/current/last/results.json":
-			io.WriteString(w, `{"MRData":{"RaceTable":{"Races":[{"season":"2026","round":"2","raceName":"Previous Grand Prix","date":"2026-02-22","Results":[{"position":"1","positionText":"1","laps":"57","Time":{"time":"1:30:00.000"},"Driver":{"familyName":"Verstappen","nationality":"Dutch"},"Constructor":{"constructorId":"red_bull"}},{"position":"20","positionText":"R","laps":"12","Driver":{"familyName":"Kimi Antonelli","nationality":"Italian"},"Constructor":{"constructorId":"mercedes"}}]}]}}}`)
+			io.WriteString(w, `{"MRData":{"RaceTable":{"Races":[{"season":"2026","round":"2","raceName":"Previous Grand Prix","url":"https://example.test/previous-race","date":"2026-02-22","Results":[{"position":"1","positionText":"1","laps":"57","Time":{"time":"1:30:00.000"},"Driver":{"familyName":"Verstappen","nationality":"Dutch"},"Constructor":{"constructorId":"red_bull"}},{"position":"20","positionText":"R","laps":"12","Driver":{"familyName":"Kimi Antonelli","nationality":"Italian"},"Constructor":{"constructorId":"mercedes"}}]}]}}}`)
 		case "/ergast/2026.json":
 			io.WriteString(w, scheduleJSON)
 		case "/openf1/sessions":
@@ -111,7 +111,7 @@ func TestLastRaceContract(t *testing.T) {
 	result := decode(t, request(t, newServer(testApp(t, mock)), "/f1/last_race/"))
 	items := result["results"].([]any)
 	winner, retired := items[0].(map[string]any), items[1].(map[string]any)
-	if result["season"] != float64(2026) || result["round"] != float64(2) || winner["time"] != "1:30:00.000" || winner["dnf_laps"] != nil || retired["surname"] != "Antonelli" || retired["time"] != "DNF (12)" || retired["dnf_laps"] != float64(12) {
+	if result["season"] != float64(2026) || result["round"] != float64(2) || result["url"] != "https://example.test/previous-race" || winner["time"] != "1:30:00.000" || winner["country"] != "Netherlands" || winner["dnf_laps"] != nil || retired["surname"] != "Antonelli" || retired["time"] != "DNF (12)" || retired["dnf_laps"] != float64(12) {
 		t.Fatalf("unexpected response: %#v", result)
 	}
 }

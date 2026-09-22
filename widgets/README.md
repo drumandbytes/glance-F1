@@ -16,7 +16,6 @@ Two other things worth knowing, where they apply:
 | [`last-race/`](./last-race/) | Full classification for the most recently completed race. |
 | [`drivers-championship/`](./drivers-championship/) | Drivers' championship standings. |
 | [`constructors-championship/`](./constructors-championship/) | Constructors' championship standings. |
-
-There's no packaged widget yet for `/f1/tyre_usage/` - it works with Glance's `custom-api` widget type like everything above, just write your own template against the [API Reference](../README.md#api-reference).
+| [`tyre-usage/`](./tyre-usage/) | Per-session tyre compound and stint length for the current race weekend, once a session's actually run. |
 
 The styling throughout is borrowed from [@abaza738](https://github.com/glanceapp/community-widgets/blob/main/widgets/formula1-widgets-by-abaza738/README.md)'s original community widgets; only the API underneath changed.

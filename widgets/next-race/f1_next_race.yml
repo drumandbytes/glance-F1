@@ -10,7 +10,9 @@
       </p>
 
       <div class="margin-block-4">
-        <p class="color-highlight">{{ $session.String "raceName" }}</p>
+        <p class="color-highlight">
+          <a href="{{ $session.String "url" }}" target="_blank" rel="noreferrer">{{ $session.String "raceName" }}</a>
+        </p>
         <p class="color-primary">
           <span>
             {{ .JSON.String "next_event.session" }}
@@ -37,7 +39,10 @@
           Circuit Details
         </p>
         <p class="size-h6">
-          Name: {{ $session.String "circuit.circuitName" }}
+          Name: <a href="{{ $session.String "circuit.url" }}" target="_blank" rel="noreferrer">{{ $session.String "circuit.circuitName" }}</a>
+        </p>
+        <p class="size-h6">
+          Location: {{ $session.String "circuit.city" }}, {{ $session.String "circuit.country" }}
         </p>
       </div>
     </div>
