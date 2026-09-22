@@ -7,11 +7,10 @@ COPY requirements.txt .
 RUN pip install --user --no-cache-dir -r requirements.txt && \
     find /root/.local -type f -name "*.pyc" -delete && \
     find /root/.local -type d -name "__pycache__" -delete && \
-    find /root/.local -type d -name "tests" -delete && \
-    find /root/.local -type d -name "*.dist-info" -not -name "*.dist-info/RECORD" -exec rm -rf {} + 2>/dev/null; \
-    rm -rf /root/.local/pycountry/locales/* && \
-    rm -rf /root/.local/lib/python*/site-packages/*/tests && \
-    rm -rf /root/.local/lib/python*/site-packages/*/test
+    find /root/.local -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
+    find /root/.local -type d -name "*.dist-info" -delete 2>/dev/null || true && \
+    find /root/.local -type d -name "*.egg-info" -delete 2>/dev/null || true && \
+    rm -rf /root/.local/pycountry/locales/* 2>/dev/null || true
 
 FROM gcr.io/distroless/python3
 
