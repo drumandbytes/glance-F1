@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/drumandbytes/paddock-api/compare/v2.0.0...v2.1.0) (2026-09-22)
+
+
+### Features
+
+* expose last_race url/country, wire unused fields into widgets ([#25](https://github.com/drumandbytes/paddock-api/issues/25)) ([ae5329c](https://github.com/drumandbytes/paddock-api/commit/ae5329ce2cc42ae2323f52b98fc6b2fae14544d2))
+
 ## [2.0.0](https://github.com/drumandbytes/paddock-api/compare/v1.2.2...v2.0.0) (2026-09-22)
 
 
