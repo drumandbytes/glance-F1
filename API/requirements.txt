@@ -1,9 +1,0 @@
-fastapi
-uvicorn
-jinja2  # transitively required by fastapi_cache's coder module (starlette.templating), even though this app renders none
-httpx
-fastf1
-pycountry
-pytz
-fastapi-cache2
-svgwrite

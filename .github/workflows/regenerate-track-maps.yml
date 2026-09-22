@@ -15,18 +15,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-go@v6
         with:
-          python-version: "3.11"
-
-      - name: Install dependencies
-        run: pip install --no-cache-dir -r API/requirements.txt
+          go-version-file: go.mod
 
       - name: Generate track maps
-        working-directory: API
-        env:
-          TRACK_COLOUR: "#e5d486"
-        run: python scripts/generate_track_maps.py
+        run: go run ./cmd/gentrackmaps
 
       # Repo default GITHUB_TOKEN is read-only (org policy), and a PR opened
       # with it needs a maintainer to manually approve the CI run before it
@@ -48,7 +42,7 @@ jobs:
           commit-message: "chore: regenerate track maps"
           title: "chore: regenerate track maps"
           body: |
-            Monthly scheduled run of `API/scripts/generate_track_maps.py`.
+            Monthly scheduled run of `cmd/gentrackmaps`.
 
             Only circuits whose rendered SVG actually changed are included -
             review the diff before merging to confirm it's a real layout
@@ -56,4 +50,4 @@ jobs:
             publish a new image; that's still the existing manual
             build+push step.
           branch: chore/regenerate-track-maps
-          add-paths: API/static/track_maps/**
+          add-paths: static/track_maps/**

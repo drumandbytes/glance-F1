@@ -1,16 +1,11 @@
-version: "3.9"
-
-# For dev purposes only. This builds the local copy.
-# Advise to use the docker image provided in instructions. 
 services:
   paddock-api:
     container_name: paddock-api
+    image: ghcr.io/drumandbytes/paddock-api:latest
     environment:
       - TIMEZONE=America/Edmonton
       - TRACK_COLOUR=#e5d486
       - EVENT_DETAIL=main
-    build:
-      context: ./API
     ports:
       - 4463:4463
     restart: unless-stopped

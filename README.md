@@ -9,6 +9,10 @@
 [Drumandbytes Projects](https://drumandbytes.com/projects/)
 
 ![README](https://img.shields.io/badge/Actively%20Maintained-Green)
+
+## Version Notice
+
+This release replaces the previous Python implementation with a Go rewrite: identical endpoints and output, a ~8x smaller image, and a faster cold start. The old Python image tags remain available on GHCR if you need to stay on them.
 ![README](https://img.shields.io/github/v/release/drumandbytes/paddock-api)
 ![README](https://img.shields.io/github/issues/drumandbytes/paddock-api)
 ![README](https://img.shields.io/github/commit-activity/w/drumandbytes/paddock-api)
@@ -37,9 +41,9 @@ Point it at a race weekend and it tells you what's actually useful to know: when
 Everything is cached deliberately, not by default TTL - a session's data doesn't change until the next session starts, so that's when the cache actually expires, not some arbitrary five minutes later.
 
 # How It's Built
-It's a small FastAPI service, and the interesting decisions are mostly about *where the data comes from* and *when it's actually fetched*.
+It's a small Go service (Echo), and the interesting decisions are mostly about *where the data comes from* and *when it's actually fetched*.
 
-Schedules, lap data, and tyre usage come from [FastF1](https://github.com/theOehrly/Fast-F1); standings and race results come from its bundled Ergast/Jolpica mirror. Both are free, but F1's live-timing backend behind them has a real 500-calls/hour ceiling, and it's shared - burn through it chasing something that isn't there, and every other endpoint on the same network starves too. So the rule here is: only ever ask for a session that's actually happened, and never guess.
+Schedules, standings, and race results come from the [Jolpica](https://github.com/jolpica/jolpica-f1) Ergast-compatible mirror; tyre stint data comes from [OpenF1](https://openf1.org/). Both are free, but F1's live-timing backend behind them has a real rate ceiling, and it's shared - burn through it chasing something that isn't there, and every other endpoint on the same network starves too. So the rule here is: only ever ask for a session that's actually happened, and never guess. An in-memory cache, keyed to when the underlying data can actually change (not a fixed TTL), keeps most requests from hitting upstream at all.
 
 Track maps break that pattern entirely, on purpose. Tracing a circuit's outline from a car's GPS telemetry only works once a car has actually driven it - which is useless for a brand-new venue's debut weekend, and turned out to be the single most fragile part of this whole service. It's replaced now with [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits), a maintained dataset of real circuit geometry that doesn't care whether a session has happened yet. No live API call, no rate limit, works for a track that's never hosted a race.
 
@@ -47,8 +51,6 @@ Track maps break that pattern entirely, on purpose. Tracing a circuit's outline 
 Runs as a single container - `docker compose` is the easiest way in.
 
 ```yaml
-version: "3.9"
-
 services:
   paddock-api:
     container_name: paddock-api
@@ -83,17 +85,15 @@ Everything returns JSON except the track map, which is an SVG image.
 | `GET /f1/tyre_usage/` | Per-driver compound and stint length for each session of the current weekend that's happened so far (FP1 through Race). Usage only, not allocation - the endpoint's own module docstring explains why. |
 
 # Development
-Requires Python 3.11+.
+Requires Go 1.26+.
 
 ```sh
-cd API
-pip install -r requirements-dev.txt
-pytest
+go test ./...
 ```
 
 `docker compose up --build` runs the whole thing locally the way it runs in production.
 
-Three workflows keep this repo honest: [`ci.yml`](./.github/workflows/ci.yml) runs the test suite on every push and PR; [`regenerate-track-maps.yml`](./.github/workflows/regenerate-track-maps.yml) re-renders every circuit's map monthly (or on demand) and opens a PR if anything actually changed; [`release-please.yml`](./.github/workflows/release-please.yml) turns Conventional Commits into a version-bump PR, and merging it tags a release, which [`publish.yml`](./.github/workflows/publish.yml) picks up and builds/pushes to GHCR.
+Four workflows keep this repo honest: [`ci.yml`](./.github/workflows/ci.yml) runs the test suite and a Docker build on every push and PR; [`regenerate-track-maps.yml`](./.github/workflows/regenerate-track-maps.yml) re-renders every circuit's map monthly (or on demand) via [`cmd/gentrackmaps`](./cmd/gentrackmaps) and opens a PR if anything actually changed; [`release-please.yml`](./.github/workflows/release-please.yml) turns Conventional Commits into a version-bump PR, and merging it tags a release, which [`publish.yml`](./.github/workflows/publish.yml) picks up and builds/pushes to GHCR.
 
 # Demo
 <table>
@@ -118,34 +118,25 @@ Same widget styling as the community integration it's built on - the difference 
 # Project Structure
 ```
 paddock-api/
-├── API/
-│   ├── main.py                    # FastAPI application entry point
-│   ├── requirements.txt           # Runtime dependencies
-│   ├── requirements-dev.txt       # + test dependencies
-│   ├── pytest.ini
-│   ├── Dockerfile                 # Container build instructions
-│   ├── scripts/
-│   │   └── generate_track_maps.py # Pre-renders static track map SVGs
-│   ├── static/track_maps/         # Pre-rendered SVGs, served directly when present
-│   ├── tests/
-│   └── API_Endpoints/
-│       ├── constructors_cleaner.py
-│       ├── current_race_cleaner.py
-│       ├── drivers_cleaner.py
-│       ├── last_race_cleaner.py
-│       ├── tyre_usage_cleaner.py
-│       ├── helpers/                # Shared schedule/time/formatting helpers
-│       └── map/
-│           ├── circuit_geometry.py # Static track geometry (bacinger/f1-circuits)
-│           ├── map_generator.py    # Track SVG rendering
-│           └── router.py           # Map endpoint logic
-├── widgets/                       # Glance widget YAMLs, one folder per widget
-├── docs/demo/                     # README screenshots
+├── main.go            # App wiring: config, HTTP client, cache, server setup
+├── cache.go           # In-memory TTL cache
+├── standings.go       # /f1/drivers_standings, /f1/constructors_standings
+├── race.go            # /f1/last_race, /f1/next_race, schedule fetch/parsing
+├── tyres.go           # /f1/tyre_usage
+├── map.go             # /f1/next_map (serves static SVG, falls back to live render)
+├── main_test.go
+├── go.mod / go.sum
+├── Dockerfile          # Container build instructions
+├── static/track_maps/  # Pre-rendered SVGs, served directly when present
+├── internal/trackmap/  # Circuit geometry fetch + SVG rendering (shared below)
+├── cmd/gentrackmaps/   # Offline pre-renderer for static/track_maps/ (GHA only)
+├── widgets/            # Glance widget YAMLs, one folder per widget
+├── docs/demo/          # README screenshots
 ├── .github/
-│   ├── workflows/                 # CI, track-map regeneration, release, publish, auto-merge
+│   ├── workflows/       # CI, track-map regeneration, release, publish, auto-merge
 │   └── dependabot.yml
 ├── LICENSE
-└── docker-compose.yaml            # Local development compose file
+└── docker-compose.yaml # Local development compose file
 ```
 
 # License

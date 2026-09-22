@@ -1,11 +1,11 @@
 version: 2
 updates:
-  - package-ecosystem: "pip"
-    directory: "/API"
+  - package-ecosystem: "gomod"
+    directory: "/"
     schedule:
       interval: "weekly"
     groups:
-      pip:
+      gomod:
         patterns:
           - "*"
 
