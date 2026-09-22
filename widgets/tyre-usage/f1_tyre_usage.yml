@@ -1,0 +1,121 @@
+- type: custom-api
+  title: Tyre Usage
+  cache: 5m
+  url: http://${F1_API_URL}:4463/f1/tyre_usage/
+  template: |
+    <div class="flex flex-column gap-10">
+      <p class="size-h5">
+        {{ .JSON.String "season" }}, Round {{ .JSON.String "round" }}
+      </p>
+      <p class="color-highlight">{{ .JSON.String "raceName" }}</p>
+
+      {{ $fp1 := .JSON.Array "sessions.fp1" }}
+      {{ $sq := .JSON.Array "sessions.sprintQualy" }}
+      {{ $sr := .JSON.Array "sessions.sprintRace" }}
+      {{ $fp2 := .JSON.Array "sessions.fp2" }}
+      {{ $fp3 := .JSON.Array "sessions.fp3" }}
+      {{ $ql := .JSON.Array "sessions.qualy" }}
+      {{ $rc := .JSON.Array "sessions.race" }}
+
+      {{ if not (or (gt (len $fp1) 0) (gt (len $sq) 0) (gt (len $sr) 0) (gt (len $fp2) 0) (gt (len $fp3) 0) (gt (len $ql) 0) (gt (len $rc) 0)) }}
+        <p class="color-base text-center">No tyre data yet - check back once a session starts.</p>
+      {{ end }}
+
+      {{ if gt (len $fp1) 0 }}
+        <p class="color-primary margin-block-4">Free Practice 1</p>
+        <ul class="list collapsible-container" data-collapse-after="5">
+          {{ range $fp1 }}
+          <li class="flex items-center">
+            <span class="grow min-width-0">{{ .String "driver" }}</span>
+            <span class="shrink-0 text-right size-h6">
+              {{ range $i, $stint := .Array "stints" }}{{ if $i }} → {{ end }}{{ slice ($stint.String "compound") 0 1 }}({{ $stint.String "laps" }}){{ end }}
+            </span>
+          </li>
+          {{ end }}
+        </ul>
+      {{ end }}
+
+      {{ if gt (len $sq) 0 }}
+        <p class="color-primary margin-block-4">Sprint Qualifying</p>
+        <ul class="list collapsible-container" data-collapse-after="5">
+          {{ range $sq }}
+          <li class="flex items-center">
+            <span class="grow min-width-0">{{ .String "driver" }}</span>
+            <span class="shrink-0 text-right size-h6">
+              {{ range $i, $stint := .Array "stints" }}{{ if $i }} → {{ end }}{{ slice ($stint.String "compound") 0 1 }}({{ $stint.String "laps" }}){{ end }}
+            </span>
+          </li>
+          {{ end }}
+        </ul>
+      {{ end }}
+
+      {{ if gt (len $sr) 0 }}
+        <p class="color-primary margin-block-4">Sprint Race</p>
+        <ul class="list collapsible-container" data-collapse-after="5">
+          {{ range $sr }}
+          <li class="flex items-center">
+            <span class="grow min-width-0">{{ .String "driver" }}</span>
+            <span class="shrink-0 text-right size-h6">
+              {{ range $i, $stint := .Array "stints" }}{{ if $i }} → {{ end }}{{ slice ($stint.String "compound") 0 1 }}({{ $stint.String "laps" }}){{ end }}
+            </span>
+          </li>
+          {{ end }}
+        </ul>
+      {{ end }}
+
+      {{ if gt (len $fp2) 0 }}
+        <p class="color-primary margin-block-4">Free Practice 2</p>
+        <ul class="list collapsible-container" data-collapse-after="5">
+          {{ range $fp2 }}
+          <li class="flex items-center">
+            <span class="grow min-width-0">{{ .String "driver" }}</span>
+            <span class="shrink-0 text-right size-h6">
+              {{ range $i, $stint := .Array "stints" }}{{ if $i }} → {{ end }}{{ slice ($stint.String "compound") 0 1 }}({{ $stint.String "laps" }}){{ end }}
+            </span>
+          </li>
+          {{ end }}
+        </ul>
+      {{ end }}
+
+      {{ if gt (len $fp3) 0 }}
+        <p class="color-primary margin-block-4">Free Practice 3</p>
+        <ul class="list collapsible-container" data-collapse-after="5">
+          {{ range $fp3 }}
+          <li class="flex items-center">
+            <span class="grow min-width-0">{{ .String "driver" }}</span>
+            <span class="shrink-0 text-right size-h6">
+              {{ range $i, $stint := .Array "stints" }}{{ if $i }} → {{ end }}{{ slice ($stint.String "compound") 0 1 }}({{ $stint.String "laps" }}){{ end }}
+            </span>
+          </li>
+          {{ end }}
+        </ul>
+      {{ end }}
+
+      {{ if gt (len $ql) 0 }}
+        <p class="color-primary margin-block-4">Qualifying</p>
+        <ul class="list collapsible-container" data-collapse-after="5">
+          {{ range $ql }}
+          <li class="flex items-center">
+            <span class="grow min-width-0">{{ .String "driver" }}</span>
+            <span class="shrink-0 text-right size-h6">
+              {{ range $i, $stint := .Array "stints" }}{{ if $i }} → {{ end }}{{ slice ($stint.String "compound") 0 1 }}({{ $stint.String "laps" }}){{ end }}
+            </span>
+          </li>
+          {{ end }}
+        </ul>
+      {{ end }}
+
+      {{ if gt (len $rc) 0 }}
+        <p class="color-primary margin-block-4">Race</p>
+        <ul class="list collapsible-container" data-collapse-after="5">
+          {{ range $rc }}
+          <li class="flex items-center">
+            <span class="grow min-width-0">{{ .String "driver" }}</span>
+            <span class="shrink-0 text-right size-h6">
+              {{ range $i, $stint := .Array "stints" }}{{ if $i }} → {{ end }}{{ slice ($stint.String "compound") 0 1 }}({{ $stint.String "laps" }}){{ end }}
+            </span>
+          </li>
+          {{ end }}
+        </ul>
+      {{ end }}
+    </div>

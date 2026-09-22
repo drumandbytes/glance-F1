@@ -4,15 +4,18 @@
   url: http://${F1_API_URL}:4463/f1/last_race/
   template: |
     <div class="flex flex-column gap-10">
-      <p class="size-h5">{{ .JSON.String "raceName" }}</p>
+      <p class="size-h5">
+        <a href="{{ .JSON.String "url" }}" target="_blank" rel="noreferrer">{{ .JSON.String "raceName" }}</a>
+      </p>
+      <p class="size-h6 color-base">{{ .JSON.String "date" }}</p>
       <ul class="list collapsible-container" data-collapse-after="5">
         {{ range $i, $v := .JSON.Array "results" }}
         <li class="flex items-center {{ if eq $i 0 }}color-primary{{ else if eq $i 1 }}color-highlight{{ end }}">
           <div class="grow min-width-0">
           <span>{{ .String "position" }}. {{ .String "surname" }} <img src="https://flagcdn.com/w20/{{ .String "flag" }}.png"
-            alt=""
+            alt="{{ .String "country" }}"
             style="width: 20px; height: 14px; object-fit: cover; vertical-align: middle"
-            class="inline-block rounded-sm" /> 
+            class="inline-block rounded-sm" />
           </span>
           {{ $id := .String "teamId" }}
             <span class="size-h6">

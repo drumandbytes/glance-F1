@@ -10,7 +10,7 @@
           <span>
             {{ .String "position" }}. {{ .String "surname" }}
             <img src="https://flagcdn.com/w20/{{ .String "flag" }}.png"
-                 alt=""
+                 alt="{{ .String "country" }}"
                  style="width: 20px; height: 14px; object-fit: cover; vertical-align: middle"
                  class="inline-block rounded-sm" />
           </span>
