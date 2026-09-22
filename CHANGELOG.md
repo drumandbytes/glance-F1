@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/drumandbytes/paddock-api/compare/v1.2.2...v2.0.0) (2026-09-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* replace Python implementation with Go ([#22](https://github.com/drumandbytes/paddock-api/issues/22))
+
+### Features
+
+* replace Python implementation with Go ([#22](https://github.com/drumandbytes/paddock-api/issues/22)) ([80962fc](https://github.com/drumandbytes/paddock-api/commit/80962fc9ad7c2693feb8873c73b3bd54745a5e47))
+
 ## [1.2.2](https://github.com/drumandbytes/paddock-api/compare/v1.2.1...v1.2.2) (2026-09-21)
 
 
