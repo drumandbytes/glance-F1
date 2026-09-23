@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/drumandbytes/paddock-api/compare/v2.1.0...v2.1.1) (2026-09-23)
+
+
+### Bug Fixes
+
+* port the better-built tyre-usage widget, fix a dead docstring ref ([#27](https://github.com/drumandbytes/paddock-api/issues/27)) ([6d02b83](https://github.com/drumandbytes/paddock-api/commit/6d02b8300e8ecb60fda6330497f3b15f17b089ce))
+
 ## [2.1.0](https://github.com/drumandbytes/paddock-api/compare/v2.0.0...v2.1.0) (2026-09-22)
 
 
