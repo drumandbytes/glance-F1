@@ -82,7 +82,7 @@ Everything returns JSON except the track map, which is an SVG image.
 | `GET /f1/drivers_standings/` | Drivers' championship standings, simplified team names, nationality flags. |
 | `GET /f1/constructors_standings/` | Constructors' championship standings, simplified team names, nationality flags. |
 | `GET /f1/next_map/` | Track map for the next race's circuit. |
-| `GET /f1/tyre_usage/` | Per-driver compound and stint length for each session of the current weekend that's happened so far (FP1 through Race). Usage only, not allocation - the endpoint's own module docstring explains why. |
+| `GET /f1/tyre_usage/` | Per-driver compound and stint length for each session of the current weekend that's happened so far (FP1 through Race). Usage only, not allocation - there's no structured source anywhere for a driver's pre-weekend tyre-compound allocation, so this only reports what was actually used once a session's run. |
 
 # Development
 Requires Go 1.26+.
