@@ -1,15 +1,11 @@
 name: Regenerate track maps
 
-# Monthly is a safety margin, not a real cadence requirement - track layouts
-# only ever change between seasons. peter-evans/create-pull-request only
-# opens/updates a PR when the script actually changed a file (plain `git
-# status` under the hood), so a no-op month produces nothing to review.
+# Monthly is a safety margin; layouts change between seasons. No change, no PR.
 on:
   schedule:
     - cron: "0 3 1 * *"
   workflow_dispatch: {}
 
-# Read-only token; no job here writes to the repo or reads other scopes.
 permissions:
   contents: read
 
@@ -28,17 +24,13 @@ jobs:
       - name: Generate track maps
         run: go run ./cmd/gentrackmaps
 
-      # Repo default GITHUB_TOKEN is read-only (org policy), and a PR opened
-      # with it needs a maintainer to manually approve the CI run before it
-      # can even start. dnb-robot is a recognized collaborator with write
-      # access, so a PR opened as it skips both problems - and unlike
-      # GITHUB_TOKEN-authored pushes, this one properly triggers CI/auto-merge.
+      # dnb-robot, not GITHUB_TOKEN: its PR triggers CI and auto-merge without
+      # manual approval.
       - uses: actions/create-github-app-token@v3
         id: app_token
         with:
           client-id: ${{ secrets.DNB_ROBOT_CLIENT_ID }}
           private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
-          # Only what this job needs (create-pull-request pushes a branch and opens a labelled PR), not the app's whole grant.
           permission-contents: write
           permission-pull-requests: write
           permission-issues: write
