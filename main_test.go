@@ -39,9 +39,9 @@ func newUpstreamMock(t *testing.T) *upstreamMock {
 		}
 		switch r.URL.Path {
 		case "/ergast/2026/driverStandings.json":
-			io.WriteString(w, `{"MRData":{"StandingsTable":{"StandingsLists":[{"DriverStandings":[{"position":"1","points":"100.5","Driver":{"familyName":"Verstappen","nationality":"Dutch"},"Constructors":[{"constructorId":"red_bull"}]}]}]}}}`)
+			io.WriteString(w, `{"MRData":{"StandingsTable":{"StandingsLists":[{"DriverStandings":[{"position":"1","points":"100.5","wins":"4","Driver":{"familyName":"Verstappen","nationality":"Dutch"},"Constructors":[{"constructorId":"red_bull"}]}]}]}}}`)
 		case "/ergast/2026/constructorStandings.json":
-			io.WriteString(w, `{"MRData":{"StandingsTable":{"StandingsLists":[{"ConstructorStandings":[{"position":1,"points":150,"wins":3,"country":"Great Britain","flag":"gb","Constructor":{"name":"McLaren","nationality":"British","url":"https://example.test/mclaren"}}]}]}}}`)
+			io.WriteString(w, `{"MRData":{"StandingsTable":{"StandingsLists":[{"ConstructorStandings":[{"position":1,"points":150,"wins":3,"country":"Great Britain","flag":"gb","Constructor":{"name":"McLaren","nationality":"British","url":"https://example.test/mclaren"}},{"position":2,"points":100,"wins":0,"Constructor":{"name":"Haas F1 Team","nationality":"American","url":"https://example.test/haas"}}]}]}}}`)
 		case "/ergast/current/last/results.json":
 			io.WriteString(w, `{"MRData":{"RaceTable":{"Races":[{"season":"2026","round":"2","raceName":"Previous Grand Prix","url":"https://example.test/previous-race","date":"2026-02-22","Results":[{"position":"1","positionText":"1","laps":"57","Time":{"time":"1:30:00.000"},"Driver":{"familyName":"Verstappen","nationality":"Dutch"},"Constructor":{"constructorId":"red_bull"}},{"position":"20","positionText":"R","laps":"12","Driver":{"familyName":"Kimi Antonelli","nationality":"Italian"},"Constructor":{"constructorId":"mercedes"}}]}]}}}`)
 		case "/ergast/2026.json":
@@ -97,7 +97,7 @@ func TestDriversContractAndCache(t *testing.T) {
 	server := newServer(testApp(t, mock))
 	result := decode(t, request(t, server, "/f1/drivers_standings/"))
 	driver := result["drivers"].([]any)[0].(map[string]any)
-	if result["season"] != float64(2026) || driver["position"] != float64(1) || driver["points"] != 100.5 || driver["teamId"] != "Red Bull" || driver["country"] != "Netherlands" || driver["flag"] != "nl" {
+	if result["season"] != float64(2026) || driver["position"] != float64(1) || driver["points"] != 100.5 || driver["wins"] != float64(4) || driver["teamId"] != "Red Bull" || driver["country"] != "Netherlands" || driver["flag"] != "nl" {
 		t.Fatalf("unexpected response: %#v", result)
 	}
 	request(t, server, "/f1/drivers_standings")
@@ -110,7 +110,7 @@ func TestConstructorsContract(t *testing.T) {
 	mock := newUpstreamMock(t)
 	result := decode(t, request(t, newServer(testApp(t, mock)), "/f1/constructors_standings/"))
 	item := result["constructors"].([]any)[0].(map[string]any)
-	if item["position"] != float64(1) || item["points"] != float64(150) || item["wins"] != float64(3) || item["country"] != "Great Britain" || item["flag"] != "gb" {
+	if item["position"] != float64(1) || item["points"] != float64(150) || item["wins"] != float64(3) || item["country"] != "Great Britain" || item["flag"] != "gb" || result["constructors"].([]any)[1].(map[string]any)["team"] != "Haas" {
 		t.Fatalf("unexpected response: %#v", result)
 	}
 }

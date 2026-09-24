@@ -19,7 +19,9 @@
             <span class="size-h6">({{ .String "teamId" }})</span>
           {{ end }}
         </div>
-        <span class="shrink-0 text-right">{{ .String "points" }}</span>
+        <span class="shrink-0 text-right">
+          {{ $w := .Int "wins" }}<span class="size-h6 color-subdue" style="display: inline-block; min-width: 3.4em;"{{ if gt $w 0 }} title="{{ $w }} {{ if eq $w 1 }}win{{ else }}wins{{ end }}"{{ end }}>{{ if gt $w 0 }}🏆 {{ $w }}{{ end }}</span> <span title="Points">{{ .String "points" }}</span>
+        </span>
       </li>
       {{ end }}
     </ul>
