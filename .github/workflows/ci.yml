@@ -1,9 +1,7 @@
 name: CI
 
 on:
-  # push and pull_request both fired on every commit to an open PR (the same
-  # jobs twice) and push again on merge to master. One trigger covers PR
-  # branches, the same as the org's other repos.
+  # PR branches only, as in the org's other repos.
   push:
     branches-ignore: [master]
   workflow_dispatch:
@@ -16,12 +14,10 @@ permissions:
   contents: read
 
 jobs:
-  # build, vet, gofmt and test, as the hand-written job did.
   test:
     uses: drumandbytes/reusable-actions/.github/workflows/go-ci.yml@v1
     with:
-      # Explicit rather than read from go.mod: its `go 1.26.0` directive
-      # would install exactly 1.26.0, while "1.26" gets the latest 1.26.x.
+      # "1.26", not go.mod: `go 1.26.0` there would pin that exact patch.
       go-version: "1.26"
       # Never run here before; enable once its findings are triaged.
       run-golangci-lint: false
@@ -41,14 +37,10 @@ jobs:
           file: Dockerfile
           push: false
 
-  # Audit of this repo's own workflows; accepted findings are in
-  # .github/zizmor.yml.
   zizmor:
     uses: drumandbytes/reusable-actions/.github/workflows/zizmor.yml@v1
 
-  # Single stable name for the org's required-status-check ruleset
-  # (protecting-main) to point at, regardless of how the real jobs above are
-  # split or renamed.
+  # The one name the ruleset requires, however the jobs above change.
   required-checks-passed:
     name: Required checks passed
     runs-on: ubuntu-latest

@@ -1,10 +1,6 @@
 name: Security
 
-# Trivy scan of the built image (base image, OS packages and the Go binary's
-# modules), kept out of CI on purpose: auto-merge gates on CI's conclusion,
-# so a scan there would let one vulnerability block every Dependabot merge.
-# Findings still fail this workflow; the weekly run catches advisories
-# published against what's already on master.
+# Image scan. Separate from CI so a finding can't block auto-merge of an unrelated Dependabot fix.
 on:
   pull_request:
     branches: [master]

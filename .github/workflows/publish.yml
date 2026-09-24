@@ -1,10 +1,6 @@
 name: Publish image
 
-# Triggered by a version tag push - normally release-please.yml pushing one
-# automatically once its release PR is merged, or push one by hand:
-# git tag v1.1.0 && git push origin v1.1.0. Either way, a deliberate release
-# action, not every commit to master. Uses GITHUB_TOKEN for GHCR auth
-# (packages: write below) - no separate secret to manage.
+# Version tags, from release-please or pushed by hand. GITHUB_TOKEN covers GHCR.
 on:
   push:
     tags:
