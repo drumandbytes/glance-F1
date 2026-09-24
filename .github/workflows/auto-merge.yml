@@ -24,8 +24,6 @@ jobs:
        github.event.workflow_run.actor.login == 'dnb-robot[bot]')
     uses: drumandbytes/reusable-actions/.github/workflows/auto-merge.yml@v1
     with:
-      # dependabot[bot]'s dependency bumps: unconditional.
-      allowed-authors: '["dependabot[bot]"]'
       # dnb-robot[bot] opens two different kinds of PR here now: release-please's
       # own version-bump PR (patch/minor/major all possible - gate to patch
       # only, same as eraser/music-router), and regenerate-track-maps' PR
@@ -37,4 +35,8 @@ jobs:
       # run (to actually cut the tag) and publish.yml's tag-triggered build -
       # neither happens from a GITHUB_TOKEN-authored merge.
       use-app-token-for-merge: true
-    secrets: inherit
+    # Only the two secrets the called workflow uses, rather than `inherit`
+    # handing it every repo and org secret.
+    secrets:
+      DNB_ROBOT_CLIENT_ID: ${{ secrets.DNB_ROBOT_CLIENT_ID }}
+      AUTOMATION_APP_PRIVATE_KEY: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
