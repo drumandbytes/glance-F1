@@ -226,7 +226,7 @@ func TestLatestSessionContract(t *testing.T) {
 	result := decode(t, request(t, newServer(testApp(t, mock)), "/f1/latest_session/"))
 	rows := result["results"].([]any)
 	first, second, third := rows[0].(map[string]any), rows[1].(map[string]any), rows[2].(map[string]any)
-	if result["session"] != "Free Practice 1" || result["raceName"] != "Test Grand Prix" || first["surname"] != "Verstappen" || first["team"] != "Red Bull Racing" || first["time"] != "1:17.738" || second["time"] != "+0.162" || third["time"] != "DNF" {
+	if result["session"] != "Free Practice 1" || result["raceName"] != "Test Grand Prix" || first["surname"] != "Verstappen" || first["team"] != "Red Bull" || first["time"] != "1:17.738" || second["time"] != "+0.162" || third["time"] != "DNF" {
 		t.Fatalf("unexpected response: %#v", result)
 	}
 }
@@ -261,5 +261,18 @@ func TestNextRaceHandsOverWhenRaceEnds(t *testing.T) {
 	after := decode(t, request(t, newServer(b), "/f1/next_race/"))
 	if after["message"] != "No upcoming race found" {
 		t.Fatalf("finished race should hand over: %#v", after)
+	}
+}
+
+func TestTeamNames(t *testing.T) {
+	for id, want := range map[string]string{"mclaren": "McLaren", "rb": "RB", "red_bull": "Red Bull", "aston_martin": "Aston Martin"} {
+		if got := formatTeamName(id); got != want {
+			t.Errorf("formatTeamName(%q) = %q, want %q", id, got, want)
+		}
+	}
+	for name, want := range map[string]string{"Red Bull Racing": "Red Bull", "Racing Bulls": "RB", "Haas F1 Team": "Haas", "McLaren": "McLaren"} {
+		if got := shortTeamName(name); got != want {
+			t.Errorf("shortTeamName(%q) = %q, want %q", name, got, want)
+		}
 	}
 }
