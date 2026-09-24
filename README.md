@@ -9,10 +9,6 @@
 [Drumandbytes Projects](https://drumandbytes.com/projects/)
 
 ![README](https://img.shields.io/badge/Actively%20Maintained-Green)
-
-## Version Notice
-
-This release replaces the previous Python implementation with a Go rewrite: identical endpoints and output, a ~8x smaller image, and a faster cold start. The old Python image tags remain available on GHCR if you need to stay on them.
 ![README](https://img.shields.io/github/v/release/drumandbytes/paddock-api)
 ![README](https://img.shields.io/github/issues/drumandbytes/paddock-api)
 ![README](https://img.shields.io/github/commit-activity/w/drumandbytes/paddock-api)
