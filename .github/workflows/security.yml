@@ -4,10 +4,10 @@ name: Security
 # modules), kept out of CI on purpose: auto-merge gates on CI's conclusion,
 # so a scan there would let one vulnerability block every Dependabot merge.
 # Findings still fail this workflow; the weekly run catches advisories
-# published against what's already on main.
+# published against what's already on master.
 on:
   pull_request:
-    branches: [main]
+    branches: [master]
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:

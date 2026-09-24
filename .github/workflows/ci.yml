@@ -2,10 +2,10 @@ name: CI
 
 on:
   # push and pull_request both fired on every commit to an open PR (the same
-  # jobs twice) and push again on merge to main. One trigger covers PR
+  # jobs twice) and push again on merge to master. One trigger covers PR
   # branches, the same as the org's other repos.
   push:
-    branches-ignore: [main]
+    branches-ignore: [master]
   workflow_dispatch:
 
 concurrency:
