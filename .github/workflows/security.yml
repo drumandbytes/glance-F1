@@ -1,0 +1,26 @@
+name: Security
+
+# Trivy scan of the built image (base image, OS packages and the Go binary's
+# modules), kept out of CI on purpose: auto-merge gates on CI's conclusion,
+# so a scan there would let one vulnerability block every Dependabot merge.
+# Findings still fail this workflow; the weekly run catches advisories
+# published against what's already on main.
+on:
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  trivy:
+    uses: drumandbytes/reusable-actions/.github/workflows/security-scan.yml@v1
+    with:
+      scan-type: image

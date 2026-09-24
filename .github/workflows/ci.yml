@@ -1,28 +1,30 @@
 name: CI
 
 on:
+  # push and pull_request both fired on every commit to an open PR (the same
+  # jobs twice) and push again on merge to main. One trigger covers PR
+  # branches, the same as the org's other repos.
   push:
-  pull_request:
+    branches-ignore: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
+  # build, vet, gofmt and test, as the hand-written job did.
   test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: go.sum
-
-      - name: Check formatting
-        run: test -z "$(gofmt -l .)"
-
-      - name: Run contract tests
-        run: go test ./...
-
-      - name: Run vet
-        run: go vet ./...
+    uses: drumandbytes/reusable-actions/.github/workflows/go-ci.yml@v1
+    with:
+      # Explicit rather than read from go.mod: its `go 1.26.0` directive
+      # would install exactly 1.26.0, while "1.26" gets the latest 1.26.x.
+      go-version: "1.26"
+      # Never run here before; enable once its findings are triaged.
+      run-golangci-lint: false
 
   build:
     runs-on: ubuntu-latest
@@ -40,9 +42,7 @@ jobs:
 
   # Single stable name for the org's required-status-check ruleset
   # (protecting-main) to point at, regardless of how the real jobs above are
-  # split or renamed - see drumandbytes/reusable-actions' own ci.yml, which
-  # this mirrors (no off-the-shelf reusable workflow in that repo fits this
-  # service, so this is defined directly here instead).
+  # split or renamed.
   required-checks-passed:
     name: Required checks passed
     runs-on: ubuntu-latest
