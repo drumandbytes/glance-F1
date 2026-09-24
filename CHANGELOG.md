@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/drumandbytes/paddock-api/compare/v2.2.0...v2.2.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* consistent team names - McLaren, and OpenF1's names matched to the rest ([#37](https://github.com/drumandbytes/paddock-api/issues/37)) ([c44f2b0](https://github.com/drumandbytes/paddock-api/commit/c44f2b02ff4006b30ac1bf106f04558b9a09ea78))
+
 ## [2.2.0](https://github.com/drumandbytes/paddock-api/compare/v2.1.2...v2.2.0) (2026-09-24)
 
 
