@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.2](https://github.com/drumandbytes/paddock-api/compare/v2.1.1...v2.1.2) (2026-09-24)
+
+
+### Bug Fixes
+
+* keep tyre usage through OpenF1 lockouts and after the race starts ([#31](https://github.com/drumandbytes/paddock-api/issues/31)) ([96685da](https://github.com/drumandbytes/paddock-api/commit/96685da1c60eee44e8d4ec0f579afd86a47e5719))
+
 ## [2.1.1](https://github.com/drumandbytes/paddock-api/compare/v2.1.0...v2.1.1) (2026-09-23)
 
 
