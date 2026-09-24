@@ -114,6 +114,7 @@ Same widget styling as the community integration it's built on - the difference 
 - A track map, drawn before qualifying even happens - even for a circuit that's never hosted a race
 - Team names simplified to fit a dashboard tile, not "Mercedes-AMG Petronas Formula One Team"
 - Tyre compound and stint length per session, once a race weekend is underway
+- Results for the latest practice, qualifying or sprint session, separate from the race
 - Smart caching keyed to when the data can actually change, not a fixed TTL
 
 </td>

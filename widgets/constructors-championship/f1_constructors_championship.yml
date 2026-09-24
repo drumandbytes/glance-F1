@@ -17,7 +17,7 @@
           </span>
         </span>
         <span class="shrink-0 text-right">
-          {{ $w := .Int "wins" }}<span class="size-h6 color-subdue" style="display: inline-block; min-width: 3.4em;"{{ if gt $w 0 }} title="{{ $w }} {{ if eq $w 1 }}win{{ else }}wins{{ end }}"{{ end }}>{{ if gt $w 0 }}🏆 {{ $w }}{{ end }}</span> <span title="Points">{{ .String "points" }}</span>
+          {{ $w := .Int "wins" }}{{ if gt $w 0 }}<span class="size-h6 color-subdue" style="display: inline-block; min-width: 3.4em;" title="{{ $w }} {{ if eq $w 1 }}win{{ else }}wins{{ end }}">🏆 {{ $w }}</span> {{ end }}<span title="Points">{{ .String "points" }}</span>
         </span>
       </li>
       {{ end }}
