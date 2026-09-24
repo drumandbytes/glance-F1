@@ -104,7 +104,7 @@ func newServer(a *app) *echo.Echo {
 	routes := []struct {
 		path    string
 		handler echo.HandlerFunc
-	}{{"/f1/drivers_standings", a.drivers}, {"/f1/constructors_standings", a.constructors}, {"/f1/last_race", a.lastRace}, {"/f1/next_race", a.nextRace}, {"/f1/tyre_usage", a.tyreUsage}, {"/f1/next_map", a.nextMap}}
+	}{{"/f1/drivers_standings", a.drivers}, {"/f1/constructors_standings", a.constructors}, {"/f1/last_race", a.lastRace}, {"/f1/next_race", a.nextRace}, {"/f1/tyre_usage", a.tyreUsage}, {"/f1/latest_session", a.latestSession}, {"/f1/next_map", a.nextMap}}
 	for _, route := range routes {
 		e.GET(route.path, route.handler)
 		e.GET(route.path+"/", route.handler)

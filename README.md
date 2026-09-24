@@ -83,6 +83,7 @@ Everything returns JSON except the track map, which is an SVG image.
 | `GET /f1/constructors_standings/` | Constructors' championship standings, simplified team names, nationality flags. |
 | `GET /f1/next_map/` | Track map for the next race's circuit. |
 | `GET /f1/tyre_usage/` | Per-driver compound and stint length for each session of the current weekend that's happened so far (FP1 through Race). Usage only, not allocation - there's no structured source anywhere for a driver's pre-weekend tyre-compound allocation, so this only reports what was actually used once a session's run. Stays on the latest weekend until the next one's first session starts, and keeps finished sessions in memory since OpenF1's free tier locks out all access while any session is live. |
+| `GET /f1/latest_session/` | Classification of the most recently finished non-race session of the current weekend (practice, sprint qualifying, qualifying or sprint) - best lap for the leader, gap for everyone else. The Grand Prix itself is `/f1/last_race/`. Sourced from OpenF1, so it shares its live-session lockout (finished sessions are kept in memory once fetched). |
 
 # Development
 Requires Go 1.26+.

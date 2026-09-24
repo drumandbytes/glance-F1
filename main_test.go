@@ -47,9 +47,11 @@ func newUpstreamMock(t *testing.T) *upstreamMock {
 		case "/ergast/2026.json":
 			io.WriteString(w, scheduleJSON)
 		case "/openf1/sessions":
-			io.WriteString(w, `[{"session_key":101,"session_name":"Practice 1","date_start":"2026-03-06T12:00:00Z","date_end":"2026-03-06T12:45:00Z"}]`)
+			io.WriteString(w, `[{"session_key":101,"session_name":"Practice 1","date_start":"2026-03-06T12:00:00Z","date_end":"2026-03-06T12:45:00Z"},{"session_key":102,"session_name":"Qualifying","date_start":"2026-03-07T15:00:00Z","date_end":"2026-03-07T15:45:00Z"}]`)
 		case "/openf1/drivers":
-			io.WriteString(w, `[{"driver_number":1,"name_acronym":"VER"}]`)
+			io.WriteString(w, `[{"driver_number":1,"name_acronym":"VER","last_name":"Verstappen","team_name":"Red Bull Racing"},{"driver_number":2,"name_acronym":"NOR","last_name":"Norris","team_name":"McLaren"},{"driver_number":3,"name_acronym":"HAM","last_name":"Hamilton","team_name":"Ferrari"}]`)
+		case "/openf1/session_result":
+			io.WriteString(w, `[{"position":2,"driver_number":2,"duration":77.9,"gap_to_leader":0.162,"number_of_laps":22,"dnf":false,"dns":false,"dsq":false},{"position":1,"driver_number":1,"duration":77.738,"gap_to_leader":0,"number_of_laps":24,"dnf":false,"dns":false,"dsq":false},{"position":3,"driver_number":3,"duration":null,"gap_to_leader":null,"number_of_laps":3,"dnf":true,"dns":false,"dsq":false}]`)
 		case "/openf1/stints":
 			io.WriteString(w, `[{"driver_number":1,"stint_number":1,"compound":"MEDIUM","lap_start":1,"lap_end":10}]`)
 		case "/geometry/mc-1929.geojson":
@@ -216,5 +218,48 @@ func TestTyreUsageStaysOnWeekendAfterRaceStarts(t *testing.T) {
 	result := decode(t, request(t, newServer(a), "/f1/tyre_usage/"))
 	if result["raceName"] != "Test Grand Prix" || result["sessions"].(map[string]any)["fp1"] == nil {
 		t.Fatalf("expected the finished weekend to stay current: %#v", result)
+	}
+}
+
+func TestLatestSessionContract(t *testing.T) {
+	mock := newUpstreamMock(t)
+	result := decode(t, request(t, newServer(testApp(t, mock)), "/f1/latest_session/"))
+	rows := result["results"].([]any)
+	first, second, third := rows[0].(map[string]any), rows[1].(map[string]any), rows[2].(map[string]any)
+	if result["session"] != "Free Practice 1" || result["raceName"] != "Test Grand Prix" || first["surname"] != "Verstappen" || first["team"] != "Red Bull Racing" || first["time"] != "1:17.738" || second["time"] != "+0.162" || third["time"] != "DNF" {
+		t.Fatalf("unexpected response: %#v", result)
+	}
+}
+
+func TestLatestSessionExcludesRaceAndSurvivesLockout(t *testing.T) {
+	mock := newUpstreamMock(t)
+	a := testApp(t, mock)
+	server := newServer(a)
+	a.now = func() time.Time { return time.Date(2026, 3, 7, 17, 0, 0, 0, time.UTC) }
+	request(t, server, "/f1/latest_session/")
+	mock.mu.Lock()
+	mock.locked = true
+	mock.mu.Unlock()
+	// Well after the race: the race itself must not become the latest session.
+	a.now = func() time.Time { return time.Date(2026, 3, 9, 12, 0, 0, 0, time.UTC) }
+	result := decode(t, request(t, server, "/f1/latest_session/"))
+	if result["key"] == "race" || result["upstream_error"] != nil || len(result["results"].([]any)) != 3 {
+		t.Fatalf("expected qualifying/practice data from cache, not the race: %#v", result)
+	}
+}
+
+func TestNextRaceHandsOverWhenRaceEnds(t *testing.T) {
+	mock := newUpstreamMock(t)
+	a := testApp(t, mock)
+	a.now = func() time.Time { return time.Date(2026, 3, 8, 16, 0, 0, 0, time.UTC) }
+	during := decode(t, request(t, newServer(a), "/f1/next_race/"))
+	if during["next_event"].(map[string]any)["session"] != "Race" {
+		t.Fatalf("race in progress should still be the current event: %#v", during)
+	}
+	b := testApp(t, mock)
+	b.now = func() time.Time { return time.Date(2026, 3, 8, 17, 30, 0, 0, time.UTC) }
+	after := decode(t, request(t, newServer(b), "/f1/next_race/"))
+	if after["message"] != "No upcoming race found" {
+		t.Fatalf("finished race should hand over: %#v", after)
 	}
 }

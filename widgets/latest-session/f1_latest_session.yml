@@ -1,0 +1,42 @@
+- type: custom-api
+  title: Latest Session
+  cache: 5m
+  url: http://${F1_API_URL}:4463/f1/latest_session/
+  # The most recently finished non-race session of the current weekend
+  # (practice, sprint qualifying, qualifying, sprint) - the Grand Prix itself
+  # is Last Race Results' job. Practice/qualifying results only exist on
+  # OpenF1, which locks out free access while any session is live, so a
+  # just-finished session can take a while to show up.
+  template: |
+    {{ $session := .JSON.String "session" }}
+    {{ $rows := .JSON.Array "results" }}
+    {{ if not $session }}
+    <p class="color-base text-center">No completed session yet.</p>
+    {{ else }}
+    <div class="flex flex-column gap-10">
+      <p class="size-h5">{{ $session }}</p>
+      <p class="size-h6 color-base">
+        {{ $url := .JSON.String "url" }}
+        {{ if $url }}<a href="{{ $url }}" target="_blank" rel="noreferrer">{{ .JSON.String "raceName" }}</a>{{ else }}{{ .JSON.String "raceName" }}{{ end }}
+      </p>
+      {{ if eq (len $rows) 0 }}
+        {{ if .JSON.String "upstream_error" }}
+        <p class="color-base text-center">Results unavailable right now - OpenF1 locks out free access while a session is live. Back shortly after it ends.</p>
+        {{ else }}
+        <p class="color-base text-center">No results yet.</p>
+        {{ end }}
+      {{ else }}
+      <ul class="list collapsible-container" data-collapse-after="5">
+        {{ range $i, $v := $rows }}
+        <li class="flex items-center {{ if eq $i 0 }}color-primary{{ else if eq $i 1 }}color-highlight{{ end }}">
+          <div class="grow min-width-0">
+            <span>{{ .String "position" }}. {{ .String "surname" }}</span>
+            {{ if .String "team" }}<span class="size-h6">({{ .String "team" }})</span>{{ end }}
+          </div>
+          <span class="shrink-0 text-right">{{ .String "time" }}</span>
+        </li>
+        {{ end }}
+      </ul>
+      {{ end }}
+    </div>
+    {{ end }}

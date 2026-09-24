@@ -50,7 +50,6 @@ func (a *app) tyreUsage(c echo.Context) error {
 	if selected == nil {
 		return c.JSON(http.StatusOK, map[string]string{"message": "No current race weekend found"})
 	}
-	names := map[string]string{"fp1": "Practice 1", "fp2": "Practice 2", "fp3": "Practice 3", "qualy": "Qualifying", "sprintQualy": "Sprint Qualifying", "sprintRace": "Sprint", "race": "Race"}
 	var openSessions []openF1Session
 	var openErr error
 	loaded := false
@@ -79,18 +78,7 @@ func (a *app) tyreUsage(c echo.Context) error {
 			missing++
 			continue
 		}
-		var match *openF1Session
-		best := 48 * time.Hour
-		for i := range openSessions {
-			start, parseErr := time.Parse(time.RFC3339, openSessions[i].Start)
-			delta := start.Sub(at)
-			if delta < 0 {
-				delta = -delta
-			}
-			if parseErr == nil && openSessions[i].Name == names[key] && delta < best {
-				match, best = &openSessions[i], delta
-			}
-		}
+		match := matchOpenF1Session(openSessions, key, at)
 		if match == nil {
 			missing++
 			continue

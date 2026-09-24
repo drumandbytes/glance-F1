@@ -17,5 +17,6 @@ Two other things worth knowing, where they apply:
 | [`drivers-championship/`](./drivers-championship/) | Drivers' championship standings. |
 | [`constructors-championship/`](./constructors-championship/) | Constructors' championship standings. |
 | [`tyre-usage/`](./tyre-usage/) | Per-session tyre compound and stint length for the current race weekend, once a session's actually run. |
+| [`latest-session/`](./latest-session/) | Classification of the most recent finished session (practice, sprint qualifying, qualifying or sprint) - separate from Last Race Results, which covers the Grand Prix. |
 
 The styling throughout is borrowed from [@abaza738](https://github.com/glanceapp/community-widgets/blob/main/widgets/formula1-widgets-by-abaza738/README.md)'s original community widgets; only the API underneath changed.
