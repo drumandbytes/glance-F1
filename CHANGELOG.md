@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/drumandbytes/paddock-api/compare/v2.2.2...v2.3.0) (2026-09-24)
+
+
+### Features
+
+* driver wins, short constructor names; clearer wins in standings tiles ([#41](https://github.com/drumandbytes/paddock-api/issues/41)) ([3637752](https://github.com/drumandbytes/paddock-api/commit/363775272bab04fe28ddfa9c4448bb217c846731))
+
 ## [2.2.2](https://github.com/drumandbytes/paddock-api/compare/v2.2.1...v2.2.2) (2026-09-24)
 
 
