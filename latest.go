@@ -6,7 +6,6 @@ import (
 	"math"
 	"net/http"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -140,7 +139,7 @@ func (a *app) fetchSessionResults(key string, at, now time.Time) ([]map[string]a
 		driver := fmt.Sprint(r.DriverNumber)
 		row := map[string]any{"position": nil, "driver": driver, "surname": driver, "team": "", "laps": r.Laps}
 		if i, ok := byNumber[r.DriverNumber]; ok {
-			row["driver"], row["surname"], row["team"] = drivers[i].Acronym, drivers[i].LastName, formatTeamName(strings.ReplaceAll(strings.ToLower(drivers[i].Team), " ", "_"))
+			row["driver"], row["surname"], row["team"] = drivers[i].Acronym, drivers[i].LastName, shortTeamName(drivers[i].Team)
 		}
 		if r.Position != nil {
 			row["position"] = *r.Position
@@ -208,4 +207,18 @@ func formatSessionDuration(seconds float64) string {
 		return fmt.Sprintf("%d:%02d:%02d.%03d", h, m, s, ms)
 	}
 	return fmt.Sprintf("%d:%02d.%03d", m, s, ms)
+}
+
+// shortTeamName maps OpenF1's team names onto the short names the rest of
+// the API uses (from Ergast constructor ids), so tiles read consistently.
+func shortTeamName(name string) string {
+	switch name {
+	case "Red Bull Racing":
+		return "Red Bull"
+	case "Racing Bulls":
+		return "RB"
+	case "Haas F1 Team":
+		return "Haas"
+	}
+	return name
 }

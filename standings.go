@@ -108,9 +108,12 @@ func normalizeNationality(value string) string {
 	}
 	return ""
 }
+
+var teamNameOverrides = map[string]string{"rb": "RB", "mclaren": "McLaren"}
+
 func formatTeamName(value string) string {
-	if value == "rb" {
-		return "RB"
+	if name, ok := teamNameOverrides[value]; ok {
+		return name
 	}
 	words := strings.Fields(strings.ReplaceAll(value, "_", " "))
 	for i := range words {
