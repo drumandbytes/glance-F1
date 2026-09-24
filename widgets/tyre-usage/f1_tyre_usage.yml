@@ -27,6 +27,7 @@
       <p class="color-base text-center">No tyre data yet - check back once a session starts.</p>
       {{ end }}
       {{ else }}
+      <p class="size-h6 color-subdue">Stints in the order they were run - numbers are laps (hover a stint for details). A stint is the time between pit-lane visits, so the same compound can repeat.</p>
       {{ if gt (len $fp1) 0 }}
       <div>
         <p class="color-primary size-h6 uppercase margin-bottom-6" style="letter-spacing: 0.5px;">Free Practice 1</p>
@@ -35,10 +36,7 @@
           <li class="flex items-center" style="gap: 8px;">
             <span class="color-highlight" style="min-width: 34px;">{{ .String "driver" }}</span>
             <span class="size-h6">
-              {{ range .Array "stints" }}
-                {{ $c := .String "compound" }}
-                {{ if eq $c "SOFT" }}<span style="color: #da291c;">{{ else if eq $c "MEDIUM" }}<span style="color: #ffd400;">{{ else if eq $c "HARD" }}<span style="color: #f0f0f0;">{{ else if eq $c "INTERMEDIATE" }}<span style="color: #43b02a;">{{ else if eq $c "WET" }}<span style="color: #0090d4;">{{ else }}<span>{{ end }}{{ $c }}</span>&times;{{ .Int "laps" }}&nbsp;&nbsp;
-              {{ end }}
+              {{ range $i, $st := .Array "stints" }}{{ $c := $st.String "compound" }}{{ $n := $st.Int "laps" }}<span title="Stint {{ add $i 1 }}: {{ $c }}, {{ $n }} {{ if eq $n 1 }}lap{{ else }}laps{{ end }}">{{ if eq $c "SOFT" }}<span style="color: #da291c;">{{ else if eq $c "MEDIUM" }}<span style="color: #ffd400;">{{ else if eq $c "HARD" }}<span class="color-highlight">{{ else if eq $c "INTERMEDIATE" }}<span style="color: #43b02a;">{{ else if eq $c "WET" }}<span style="color: #0090d4;">{{ else }}<span>{{ end }}{{ $c }}</span>&times;{{ $n }}</span>&nbsp;&nbsp;{{ end }}
             </span>
           </li>
           {{ end }}
@@ -54,10 +52,7 @@
           <li class="flex items-center" style="gap: 8px;">
             <span class="color-highlight" style="min-width: 34px;">{{ .String "driver" }}</span>
             <span class="size-h6">
-              {{ range .Array "stints" }}
-                {{ $c := .String "compound" }}
-                {{ if eq $c "SOFT" }}<span style="color: #da291c;">{{ else if eq $c "MEDIUM" }}<span style="color: #ffd400;">{{ else if eq $c "HARD" }}<span style="color: #f0f0f0;">{{ else if eq $c "INTERMEDIATE" }}<span style="color: #43b02a;">{{ else if eq $c "WET" }}<span style="color: #0090d4;">{{ else }}<span>{{ end }}{{ $c }}</span>&times;{{ .Int "laps" }}&nbsp;&nbsp;
-              {{ end }}
+              {{ range $i, $st := .Array "stints" }}{{ $c := $st.String "compound" }}{{ $n := $st.Int "laps" }}<span title="Stint {{ add $i 1 }}: {{ $c }}, {{ $n }} {{ if eq $n 1 }}lap{{ else }}laps{{ end }}">{{ if eq $c "SOFT" }}<span style="color: #da291c;">{{ else if eq $c "MEDIUM" }}<span style="color: #ffd400;">{{ else if eq $c "HARD" }}<span class="color-highlight">{{ else if eq $c "INTERMEDIATE" }}<span style="color: #43b02a;">{{ else if eq $c "WET" }}<span style="color: #0090d4;">{{ else }}<span>{{ end }}{{ $c }}</span>&times;{{ $n }}</span>&nbsp;&nbsp;{{ end }}
             </span>
           </li>
           {{ end }}
@@ -73,10 +68,7 @@
           <li class="flex items-center" style="gap: 8px;">
             <span class="color-highlight" style="min-width: 34px;">{{ .String "driver" }}</span>
             <span class="size-h6">
-              {{ range .Array "stints" }}
-                {{ $c := .String "compound" }}
-                {{ if eq $c "SOFT" }}<span style="color: #da291c;">{{ else if eq $c "MEDIUM" }}<span style="color: #ffd400;">{{ else if eq $c "HARD" }}<span style="color: #f0f0f0;">{{ else if eq $c "INTERMEDIATE" }}<span style="color: #43b02a;">{{ else if eq $c "WET" }}<span style="color: #0090d4;">{{ else }}<span>{{ end }}{{ $c }}</span>&times;{{ .Int "laps" }}&nbsp;&nbsp;
-              {{ end }}
+              {{ range $i, $st := .Array "stints" }}{{ $c := $st.String "compound" }}{{ $n := $st.Int "laps" }}<span title="Stint {{ add $i 1 }}: {{ $c }}, {{ $n }} {{ if eq $n 1 }}lap{{ else }}laps{{ end }}">{{ if eq $c "SOFT" }}<span style="color: #da291c;">{{ else if eq $c "MEDIUM" }}<span style="color: #ffd400;">{{ else if eq $c "HARD" }}<span class="color-highlight">{{ else if eq $c "INTERMEDIATE" }}<span style="color: #43b02a;">{{ else if eq $c "WET" }}<span style="color: #0090d4;">{{ else }}<span>{{ end }}{{ $c }}</span>&times;{{ $n }}</span>&nbsp;&nbsp;{{ end }}
             </span>
           </li>
           {{ end }}
@@ -92,10 +84,7 @@
           <li class="flex items-center" style="gap: 8px;">
             <span class="color-highlight" style="min-width: 34px;">{{ .String "driver" }}</span>
             <span class="size-h6">
-              {{ range .Array "stints" }}
-                {{ $c := .String "compound" }}
-                {{ if eq $c "SOFT" }}<span style="color: #da291c;">{{ else if eq $c "MEDIUM" }}<span style="color: #ffd400;">{{ else if eq $c "HARD" }}<span style="color: #f0f0f0;">{{ else if eq $c "INTERMEDIATE" }}<span style="color: #43b02a;">{{ else if eq $c "WET" }}<span style="color: #0090d4;">{{ else }}<span>{{ end }}{{ $c }}</span>&times;{{ .Int "laps" }}&nbsp;&nbsp;
-              {{ end }}
+              {{ range $i, $st := .Array "stints" }}{{ $c := $st.String "compound" }}{{ $n := $st.Int "laps" }}<span title="Stint {{ add $i 1 }}: {{ $c }}, {{ $n }} {{ if eq $n 1 }}lap{{ else }}laps{{ end }}">{{ if eq $c "SOFT" }}<span style="color: #da291c;">{{ else if eq $c "MEDIUM" }}<span style="color: #ffd400;">{{ else if eq $c "HARD" }}<span class="color-highlight">{{ else if eq $c "INTERMEDIATE" }}<span style="color: #43b02a;">{{ else if eq $c "WET" }}<span style="color: #0090d4;">{{ else }}<span>{{ end }}{{ $c }}</span>&times;{{ $n }}</span>&nbsp;&nbsp;{{ end }}
             </span>
           </li>
           {{ end }}
@@ -111,10 +100,7 @@
           <li class="flex items-center" style="gap: 8px;">
             <span class="color-highlight" style="min-width: 34px;">{{ .String "driver" }}</span>
             <span class="size-h6">
-              {{ range .Array "stints" }}
-                {{ $c := .String "compound" }}
-                {{ if eq $c "SOFT" }}<span style="color: #da291c;">{{ else if eq $c "MEDIUM" }}<span style="color: #ffd400;">{{ else if eq $c "HARD" }}<span style="color: #f0f0f0;">{{ else if eq $c "INTERMEDIATE" }}<span style="color: #43b02a;">{{ else if eq $c "WET" }}<span style="color: #0090d4;">{{ else }}<span>{{ end }}{{ $c }}</span>&times;{{ .Int "laps" }}&nbsp;&nbsp;
-              {{ end }}
+              {{ range $i, $st := .Array "stints" }}{{ $c := $st.String "compound" }}{{ $n := $st.Int "laps" }}<span title="Stint {{ add $i 1 }}: {{ $c }}, {{ $n }} {{ if eq $n 1 }}lap{{ else }}laps{{ end }}">{{ if eq $c "SOFT" }}<span style="color: #da291c;">{{ else if eq $c "MEDIUM" }}<span style="color: #ffd400;">{{ else if eq $c "HARD" }}<span class="color-highlight">{{ else if eq $c "INTERMEDIATE" }}<span style="color: #43b02a;">{{ else if eq $c "WET" }}<span style="color: #0090d4;">{{ else }}<span>{{ end }}{{ $c }}</span>&times;{{ $n }}</span>&nbsp;&nbsp;{{ end }}
             </span>
           </li>
           {{ end }}
@@ -130,10 +116,7 @@
           <li class="flex items-center" style="gap: 8px;">
             <span class="color-highlight" style="min-width: 34px;">{{ .String "driver" }}</span>
             <span class="size-h6">
-              {{ range .Array "stints" }}
-                {{ $c := .String "compound" }}
-                {{ if eq $c "SOFT" }}<span style="color: #da291c;">{{ else if eq $c "MEDIUM" }}<span style="color: #ffd400;">{{ else if eq $c "HARD" }}<span style="color: #f0f0f0;">{{ else if eq $c "INTERMEDIATE" }}<span style="color: #43b02a;">{{ else if eq $c "WET" }}<span style="color: #0090d4;">{{ else }}<span>{{ end }}{{ $c }}</span>&times;{{ .Int "laps" }}&nbsp;&nbsp;
-              {{ end }}
+              {{ range $i, $st := .Array "stints" }}{{ $c := $st.String "compound" }}{{ $n := $st.Int "laps" }}<span title="Stint {{ add $i 1 }}: {{ $c }}, {{ $n }} {{ if eq $n 1 }}lap{{ else }}laps{{ end }}">{{ if eq $c "SOFT" }}<span style="color: #da291c;">{{ else if eq $c "MEDIUM" }}<span style="color: #ffd400;">{{ else if eq $c "HARD" }}<span class="color-highlight">{{ else if eq $c "INTERMEDIATE" }}<span style="color: #43b02a;">{{ else if eq $c "WET" }}<span style="color: #0090d4;">{{ else }}<span>{{ end }}{{ $c }}</span>&times;{{ $n }}</span>&nbsp;&nbsp;{{ end }}
             </span>
           </li>
           {{ end }}
@@ -149,10 +132,7 @@
           <li class="flex items-center" style="gap: 8px;">
             <span class="color-highlight" style="min-width: 34px;">{{ .String "driver" }}</span>
             <span class="size-h6">
-              {{ range .Array "stints" }}
-                {{ $c := .String "compound" }}
-                {{ if eq $c "SOFT" }}<span style="color: #da291c;">{{ else if eq $c "MEDIUM" }}<span style="color: #ffd400;">{{ else if eq $c "HARD" }}<span style="color: #f0f0f0;">{{ else if eq $c "INTERMEDIATE" }}<span style="color: #43b02a;">{{ else if eq $c "WET" }}<span style="color: #0090d4;">{{ else }}<span>{{ end }}{{ $c }}</span>&times;{{ .Int "laps" }}&nbsp;&nbsp;
-              {{ end }}
+              {{ range $i, $st := .Array "stints" }}{{ $c := $st.String "compound" }}{{ $n := $st.Int "laps" }}<span title="Stint {{ add $i 1 }}: {{ $c }}, {{ $n }} {{ if eq $n 1 }}lap{{ else }}laps{{ end }}">{{ if eq $c "SOFT" }}<span style="color: #da291c;">{{ else if eq $c "MEDIUM" }}<span style="color: #ffd400;">{{ else if eq $c "HARD" }}<span class="color-highlight">{{ else if eq $c "INTERMEDIATE" }}<span style="color: #43b02a;">{{ else if eq $c "WET" }}<span style="color: #0090d4;">{{ else }}<span>{{ end }}{{ $c }}</span>&times;{{ $n }}</span>&nbsp;&nbsp;{{ end }}
             </span>
           </li>
           {{ end }}
