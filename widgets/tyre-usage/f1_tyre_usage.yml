@@ -21,7 +21,11 @@
       {{ $qualy := .JSON.Array "sessions.qualy" }}
       {{ $race := .JSON.Array "sessions.race" }}
       {{ if and (eq (len $fp1) 0) (eq (len $fp2) 0) (eq (len $fp3) 0) (eq (len $sq) 0) (eq (len $sr) 0) (eq (len $qualy) 0) (eq (len $race) 0) }}
+      {{ if .JSON.String "upstream_error" }}
+      <p class="color-base text-center">Tyre data unavailable right now - OpenF1 locks out free access while a session is live. Back shortly after it ends.</p>
+      {{ else }}
       <p class="color-base text-center">No tyre data yet - check back once a session starts.</p>
+      {{ end }}
       {{ else }}
       {{ if gt (len $fp1) 0 }}
       <div>

@@ -10,64 +10,110 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type openF1Session struct {
+	Key   int    `json:"session_key"`
+	Name  string `json:"session_name"`
+	Start string `json:"date_start"`
+	End   string `json:"date_end"`
+}
+
+// currentWeekend is the latest race weekend whose first session has started -
+// it stays current until the next weekend's first session starts, so a
+// finished race's tyre usage keeps showing through the week.
+func currentWeekend(races []race, now time.Time) *race {
+	var current *race
+	for i := range races {
+		var first time.Time
+		for _, key := range sessionKeys {
+			if at := rawSessionDateTime(races[i].Schedule[key]); !at.IsZero() && (first.IsZero() || at.Before(first)) {
+				first = at
+			}
+		}
+		if !first.IsZero() && !first.After(now) {
+			current = &races[i]
+		}
+	}
+	return current
+}
+
 func (a *app) tyreUsage(c echo.Context) error {
 	if cached, ok := a.cache.get("f1:tyre_usage", a.now()); ok {
 		return c.JSON(http.StatusOK, cached)
 	}
-	year := a.now().In(a.config.timezone).Year()
+	now := a.now()
+	year := now.In(a.config.timezone).Year()
 	races, err := a.fetchSchedule(year)
 	if err != nil {
 		return c.JSON(http.StatusOK, map[string]string{"error": "Exception while fetching: " + err.Error()})
 	}
-	var selected *race
-	for i := range races {
-		at := rawSessionDateTime(races[i].Schedule["race"])
-		if !at.IsZero() && !at.Before(a.now()) {
-			selected = &races[i]
-			break
-		}
-	}
+	selected := currentWeekend(races, now)
 	if selected == nil {
 		return c.JSON(http.StatusOK, map[string]string{"message": "No current race weekend found"})
 	}
-	var openSessions []struct {
-		Key   int    `json:"session_key"`
-		Name  string `json:"session_name"`
-		Start string `json:"date_start"`
-	}
-	if err := a.fetchJSON(fmt.Sprintf("%s/sessions?year=%d", a.config.openF1Base, year), &openSessions); err != nil {
-		return c.JSON(http.StatusOK, map[string]string{"error": "Exception while fetching: " + err.Error()})
-	}
 	names := map[string]string{"fp1": "Practice 1", "fp2": "Practice 2", "fp3": "Practice 3", "qualy": "Qualifying", "sprintQualy": "Sprint Qualifying", "sprintRace": "Sprint", "race": "Race"}
+	var openSessions []openF1Session
+	var openErr error
+	loaded := false
 	sessions := make(map[string]any, 7)
+	missing := 0
 	for _, key := range sessionKeys {
 		sessions[key] = nil
 		at := rawSessionDateTime(selected.Schedule[key])
-		if at.IsZero() || at.After(a.now()) {
+		if at.IsZero() || at.After(now) {
 			continue
 		}
-		openKey := 0
+		// A finished session's stints never change, so once fetched they're
+		// kept for good - OpenF1's free tier locks out all access (even past
+		// sessions) while any session is live, which would otherwise blank
+		// data we already had.
+		sessionCacheKey := fmt.Sprintf("tyre_session:%d:%d:%s", year, selected.Round, key)
+		if cached, ok := a.cache.get(sessionCacheKey, now); ok {
+			sessions[key] = cached
+			continue
+		}
+		if !loaded {
+			loaded = true
+			openErr = a.fetchJSON(fmt.Sprintf("%s/sessions?year=%d", a.config.openF1Base, year), &openSessions)
+		}
+		if openErr != nil {
+			missing++
+			continue
+		}
+		var match *openF1Session
 		best := 48 * time.Hour
-		for _, candidate := range openSessions {
-			start, parseErr := time.Parse(time.RFC3339, candidate.Start)
+		for i := range openSessions {
+			start, parseErr := time.Parse(time.RFC3339, openSessions[i].Start)
 			delta := start.Sub(at)
 			if delta < 0 {
 				delta = -delta
 			}
-			if parseErr == nil && candidate.Name == names[key] && delta < best {
-				openKey, best = candidate.Key, delta
+			if parseErr == nil && openSessions[i].Name == names[key] && delta < best {
+				match, best = &openSessions[i], delta
 			}
 		}
-		if openKey == 0 {
+		if match == nil {
+			missing++
 			continue
 		}
-		usage, fetchErr := a.fetchStints(openKey)
-		if fetchErr == nil {
-			sessions[key] = usage
+		usage, fetchErr := a.fetchStints(match.Key)
+		if fetchErr != nil {
+			missing++
+			continue
+		}
+		sessions[key] = usage
+		if end, parseErr := time.Parse(time.RFC3339, match.End); parseErr == nil && end.Before(now) {
+			a.cache.set(sessionCacheKey, usage, now.Add(30*24*time.Hour))
 		}
 	}
 	result := map[string]any{"season": year, "round": selected.Round, "raceName": selected.RaceName, "sessions": sessions}
-	a.cache.set("f1:tyre_usage", result, a.now().Add(defaultExpire))
+	if openErr != nil {
+		result["upstream_error"] = openErr.Error()
+	}
+	ttl := defaultExpire
+	if missing > 0 {
+		ttl = 2 * time.Minute
+	}
+	a.cache.set("f1:tyre_usage", result, now.Add(ttl))
 	return c.JSON(http.StatusOK, result)
 }
 

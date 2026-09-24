@@ -20,6 +20,7 @@ type upstreamMock struct {
 	server *httptest.Server
 	mu     sync.Mutex
 	hits   map[string]int
+	locked bool
 }
 
 func newUpstreamMock(t *testing.T) *upstreamMock {
@@ -28,8 +29,14 @@ func newUpstreamMock(t *testing.T) *upstreamMock {
 	mock.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mock.mu.Lock()
 		mock.hits[r.URL.Path]++
+		locked := mock.locked
 		mock.mu.Unlock()
 		w.Header().Set("Content-Type", "application/json")
+		if locked && strings.HasPrefix(r.URL.Path, "/openf1/") {
+			w.WriteHeader(http.StatusUnauthorized)
+			io.WriteString(w, `{"detail":"Live F1 session in progress."}`)
+			return
+		}
 		switch r.URL.Path {
 		case "/ergast/2026/driverStandings.json":
 			io.WriteString(w, `{"MRData":{"StandingsTable":{"StandingsLists":[{"DriverStandings":[{"position":"1","points":"100.5","Driver":{"familyName":"Verstappen","nationality":"Dutch"},"Constructors":[{"constructorId":"red_bull"}]}]}]}}}`)
@@ -40,7 +47,7 @@ func newUpstreamMock(t *testing.T) *upstreamMock {
 		case "/ergast/2026.json":
 			io.WriteString(w, scheduleJSON)
 		case "/openf1/sessions":
-			io.WriteString(w, `[{"session_key":101,"session_name":"Practice 1","date_start":"2026-03-06T12:00:00Z"}]`)
+			io.WriteString(w, `[{"session_key":101,"session_name":"Practice 1","date_start":"2026-03-06T12:00:00Z","date_end":"2026-03-06T12:45:00Z"}]`)
 		case "/openf1/drivers":
 			io.WriteString(w, `[{"driver_number":1,"name_acronym":"VER"}]`)
 		case "/openf1/stints":
@@ -172,5 +179,42 @@ func TestLoadConfigValidation(t *testing.T) {
 	t.Setenv("EVENT_DETAIL", "bad")
 	if _, err := loadConfig(); err == nil {
 		t.Fatal("invalid EVENT_DETAIL accepted")
+	}
+}
+
+func TestTyreUsageKeepsFinishedSessionsThroughOpenF1Lockout(t *testing.T) {
+	mock := newUpstreamMock(t)
+	a := testApp(t, mock)
+	server := newServer(a)
+	first := decode(t, request(t, server, "/f1/tyre_usage/"))
+	if first["sessions"].(map[string]any)["fp1"] == nil {
+		t.Fatalf("expected fp1 before lockout: %#v", first)
+	}
+	mock.mu.Lock()
+	mock.locked = true
+	mock.mu.Unlock()
+	a.now = func() time.Time { return time.Date(2026, 3, 6, 15, 0, 0, 0, time.UTC) }
+	second := decode(t, request(t, server, "/f1/tyre_usage/"))
+	if second["sessions"].(map[string]any)["fp1"] == nil || second["upstream_error"] != nil {
+		t.Fatalf("finished session should survive the lockout: %#v", second)
+	}
+}
+
+func TestTyreUsageSurfacesLockoutWhenNothingCached(t *testing.T) {
+	mock := newUpstreamMock(t)
+	mock.locked = true
+	result := decode(t, request(t, newServer(testApp(t, mock)), "/f1/tyre_usage/"))
+	if result["upstream_error"] == nil || result["sessions"].(map[string]any)["fp1"] != nil {
+		t.Fatalf("expected upstream_error and no data: %#v", result)
+	}
+}
+
+func TestTyreUsageStaysOnWeekendAfterRaceStarts(t *testing.T) {
+	mock := newUpstreamMock(t)
+	a := testApp(t, mock)
+	a.now = func() time.Time { return time.Date(2026, 3, 8, 16, 0, 0, 0, time.UTC) }
+	result := decode(t, request(t, newServer(a), "/f1/tyre_usage/"))
+	if result["raceName"] != "Test Grand Prix" || result["sessions"].(map[string]any)["fp1"] == nil {
+		t.Fatalf("expected the finished weekend to stay current: %#v", result)
 	}
 }
