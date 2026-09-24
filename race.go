@@ -137,7 +137,7 @@ func (a *app) getNextRace() (*nextRaceResponse, error) {
 	var selected *race
 	for i := range races {
 		dt := rawSessionDateTime(races[i].Schedule["race"])
-		if !dt.IsZero() && !dt.Before(now) {
+		if !dt.IsZero() && !dt.Add(raceWindow).Before(now) {
 			selected = &races[i]
 			break
 		}
@@ -145,7 +145,6 @@ func (a *app) getNextRace() (*nextRaceResponse, error) {
 	if selected == nil {
 		return nil, nil
 	}
-	readable := map[string]string{"fp1": "Free Practice 1", "fp2": "Free Practice 2", "fp3": "Free Practice 3", "qualy": "Qualifying", "sprintQualy": "Sprint Qualifying", "sprintRace": "Sprint Race", "race": "Race"}
 	type candidate struct {
 		key string
 		at  time.Time
@@ -167,15 +166,15 @@ func (a *app) getNextRace() (*nextRaceResponse, error) {
 	}
 	sort.Slice(candidates, func(i, j int) bool { return candidates[i].at.Before(candidates[j].at) })
 	var event *nextEvent
+	expires := now.Add(defaultExpire)
 	if len(candidates) > 0 {
 		data := selected.Schedule[candidates[0].key]
-		event = &nextEvent{Session: readable[candidates[0].key], Date: *data.Date, Time: *data.Time, DateTime: *data.DateTime}
-	}
-	expires := now.Add(defaultExpire)
-	if event != nil {
+		event = &nextEvent{Session: sessionLabels[candidates[0].key], Date: *data.Date, Time: *data.Time, DateTime: *data.DateTime}
 		expires = candidates[0].at
-	} else if raceAt := rawSessionDateTimeFromConverted(selected.Schedule["race"]); !raceAt.IsZero() && now.Before(raceAt.Add(time.Hour)) {
-		expires = raceAt.Add(time.Hour)
+	} else if data := selected.Schedule["race"]; data.DateTime != nil {
+		// Race has started but not ended: keep it as the current event.
+		event = &nextEvent{Session: sessionLabels["race"], Date: *data.Date, Time: *data.Time, DateTime: *data.DateTime}
+		expires = rawSessionDateTimeFromConverted(data).Add(raceWindow)
 	}
 	result := &nextRaceResponse{Season: year, Round: selected.Round, Timezone: a.config.timezoneID, NextEvent: event, CacheExpires: formatRFC3339(expires.In(a.config.timezone)), Race: []race{*selected}}
 	a.cache.set("f1:next_race", result, expires)

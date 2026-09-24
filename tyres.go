@@ -50,7 +50,6 @@ func (a *app) tyreUsage(c echo.Context) error {
 	if selected == nil {
 		return c.JSON(http.StatusOK, map[string]string{"message": "No current race weekend found"})
 	}
-	names := map[string]string{"fp1": "Practice 1", "fp2": "Practice 2", "fp3": "Practice 3", "qualy": "Qualifying", "sprintQualy": "Sprint Qualifying", "sprintRace": "Sprint", "race": "Race"}
 	var openSessions []openF1Session
 	var openErr error
 	loaded := false
@@ -73,24 +72,13 @@ func (a *app) tyreUsage(c echo.Context) error {
 		}
 		if !loaded {
 			loaded = true
-			openErr = a.fetchJSON(fmt.Sprintf("%s/sessions?year=%d", a.config.openF1Base, year), &openSessions)
+			openErr = a.fetchOpenF1(fmt.Sprintf("%s/sessions?year=%d", a.config.openF1Base, year), &openSessions)
 		}
 		if openErr != nil {
 			missing++
 			continue
 		}
-		var match *openF1Session
-		best := 48 * time.Hour
-		for i := range openSessions {
-			start, parseErr := time.Parse(time.RFC3339, openSessions[i].Start)
-			delta := start.Sub(at)
-			if delta < 0 {
-				delta = -delta
-			}
-			if parseErr == nil && openSessions[i].Name == names[key] && delta < best {
-				match, best = &openSessions[i], delta
-			}
-		}
+		match := matchOpenF1Session(openSessions, key, at)
 		if match == nil {
 			missing++
 			continue
@@ -122,7 +110,7 @@ func (a *app) fetchStints(sessionKey int) ([]map[string]any, error) {
 		Number  int    `json:"driver_number"`
 		Acronym string `json:"name_acronym"`
 	}
-	if err := a.fetchJSON(fmt.Sprintf("%s/drivers?session_key=%d", a.config.openF1Base, sessionKey), &drivers); err != nil {
+	if err := a.fetchOpenF1(fmt.Sprintf("%s/drivers?session_key=%d", a.config.openF1Base, sessionKey), &drivers); err != nil {
 		return nil, err
 	}
 	var stints []struct {
@@ -132,7 +120,7 @@ func (a *app) fetchStints(sessionKey int) ([]map[string]any, error) {
 		Start    *int    `json:"lap_start"`
 		End      *int    `json:"lap_end"`
 	}
-	if err := a.fetchJSON(fmt.Sprintf("%s/stints?session_key=%d", a.config.openF1Base, sessionKey), &stints); err != nil {
+	if err := a.fetchOpenF1(fmt.Sprintf("%s/stints?session_key=%d", a.config.openF1Base, sessionKey), &stints); err != nil {
 		return nil, err
 	}
 	acronyms := make(map[int]string)

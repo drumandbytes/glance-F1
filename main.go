@@ -10,6 +10,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -41,6 +42,10 @@ type app struct {
 	cache  *cacheStore
 	now    func() time.Time
 	log    *slog.Logger
+
+	openF1Gap  time.Duration
+	openF1Mu   sync.Mutex
+	openF1Next time.Time
 }
 
 func loadConfig() (config, error) {
@@ -92,6 +97,19 @@ func (a *app) fetchJSON(url string, target any) error {
 	return decoder.Decode(target)
 }
 
+// fetchOpenF1 spaces out calls to OpenF1, whose free tier allows 3 requests
+// per second - the tyre and latest-session widgets each need several per
+// refresh and load together.
+func (a *app) fetchOpenF1(url string, target any) error {
+	a.openF1Mu.Lock()
+	if wait := time.Until(a.openF1Next); wait > 0 {
+		time.Sleep(wait)
+	}
+	a.openF1Next = time.Now().Add(a.openF1Gap)
+	a.openF1Mu.Unlock()
+	return a.fetchJSON(url, target)
+}
+
 func newServer(a *app) *echo.Echo {
 	e := echo.New()
 	e.HideBanner, e.HidePort = true, true
@@ -104,7 +122,7 @@ func newServer(a *app) *echo.Echo {
 	routes := []struct {
 		path    string
 		handler echo.HandlerFunc
-	}{{"/f1/drivers_standings", a.drivers}, {"/f1/constructors_standings", a.constructors}, {"/f1/last_race", a.lastRace}, {"/f1/next_race", a.nextRace}, {"/f1/tyre_usage", a.tyreUsage}, {"/f1/next_map", a.nextMap}}
+	}{{"/f1/drivers_standings", a.drivers}, {"/f1/constructors_standings", a.constructors}, {"/f1/last_race", a.lastRace}, {"/f1/next_race", a.nextRace}, {"/f1/tyre_usage", a.tyreUsage}, {"/f1/latest_session", a.latestSession}, {"/f1/next_map", a.nextMap}}
 	for _, route := range routes {
 		e.GET(route.path, route.handler)
 		e.GET(route.path+"/", route.handler)
@@ -119,7 +137,7 @@ func main() {
 		logger.Error("invalid configuration", "error", err)
 		os.Exit(1)
 	}
-	a := &app{config: cfg, client: &http.Client{Timeout: 15 * time.Second}, cache: newCache(), now: time.Now, log: logger}
+	a := &app{config: cfg, client: &http.Client{Timeout: 15 * time.Second}, cache: newCache(), now: time.Now, log: logger, openF1Gap: 400 * time.Millisecond}
 	port := envOr("PORT", "4463")
 	logger.Info("server starting", "port", port)
 	if err := newServer(a).Start(":" + port); err != nil && !errors.Is(err, http.ErrServerClosed) {
