@@ -45,6 +45,8 @@ It's a small Go service (Echo), and the interesting decisions are mostly about *
 
 Schedules, standings, and race results come from the [Jolpica](https://github.com/jolpica/jolpica-f1) Ergast-compatible mirror; tyre stint data comes from [OpenF1](https://openf1.org/). Both are free, but F1's live-timing backend behind them has a real rate ceiling, and it's shared - burn through it chasing something that isn't there, and every other endpoint on the same network starves too. So the rule here is: only ever ask for a session that's actually happened, and never guess. An in-memory cache, keyed to when the underlying data can actually change (not a fixed TTL), keeps most requests from hitting upstream at all.
 
+OpenF1's free tier is locked out entirely (past sessions included) for a stretch around every live session, so once a session has finished its results are treated as immutable and kept for good - in memory, and on disk under `CACHE_DIR` if a volume is mounted there, so a restart during a lockout doesn't blank them. Anything else that never changes once it exists can use the same store.
+
 Track maps break that pattern entirely, on purpose. Tracing a circuit's outline from a car's GPS telemetry only works once a car has actually driven it - which is useless for a brand-new venue's debut weekend, and turned out to be the single most fragile part of this whole service. It's replaced now with [bacinger/f1-circuits](https://github.com/bacinger/f1-circuits), a maintained dataset of real circuit geometry that doesn't care whether a session has happened yet. No live API call, no rate limit, works for a track that's never hosted a race.
 
 # Getting Started
@@ -59,9 +61,14 @@ services:
       - TIMEZONE=America/Edmonton # Specify your timezone.
       - TRACK_COLOUR=#e5d486 # Specify desired track map color
       - EVENT_DETAIL=main # Optional. main tracks qualis and races (inc. sprints), race tracks races. 
+    volumes:
+      - paddock-cache:/data # Optional. Keeps finished-session data across restarts.
     ports:
       - 4463:4463
     restart: unless-stopped
+
+volumes:
+  paddock-cache:
 ```
 
 | Variable | Required | Description |
@@ -69,6 +76,7 @@ services:
 | `TIMEZONE` | Yes | IANA timezone name (e.g. `America/Edmonton`, `Europe/Tallinn`) - every timestamp the API returns is converted to this. |
 | `TRACK_COLOUR` | Yes | Hex colour (e.g. `#e5d486`) for the track-map line. |
 | `EVENT_DETAIL` | No, defaults to `main` | Which sessions `/f1/next_race/` counts down to: `main` (quali + races, skips practice), `race` (races only), or `detailed` (every session). |
+| `CACHE_DIR` | No, defaults to `/data` in the image | Where finished-session data is kept so it survives restarts. Mount a volume there (as above); without one it still works, it just doesn't outlive the container. Runs as UID 65532, so a bind mount or Kubernetes volume needs to be writable by it. |
 
 Once it's running, grab the widgets you want from [`widgets/`](./widgets/) and drop them into your Glance config - see that folder's own README for setup and what each one shows. See the [Glance docs](https://github.com/glanceapp/glance/blob/main/docs/configuration.md#including-other-config-files) for how config files like these get included.
 

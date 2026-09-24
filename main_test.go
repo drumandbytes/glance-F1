@@ -69,7 +69,7 @@ func testApp(t *testing.T, mock *upstreamMock) *app {
 	staticDir := t.TempDir()
 	return &app{
 		config: config{timezone: time.FixedZone("Test", -7*60*60), timezoneID: "America/Edmonton", eventDetail: "main", trackColour: "#e5d486", ergastBase: mock.server.URL + "/ergast", openF1Base: mock.server.URL + "/openf1", geometryBase: mock.server.URL + "/geometry", staticMapDir: staticDir},
-		client: mock.server.Client(), cache: newCache(), now: func() time.Time { return time.Date(2026, 3, 6, 13, 0, 0, 0, time.UTC) }, log: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		client: mock.server.Client(), cache: newCache(""), now: func() time.Time { return time.Date(2026, 3, 6, 13, 0, 0, 0, time.UTC) }, log: slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
 }
 
@@ -274,5 +274,33 @@ func TestTeamNames(t *testing.T) {
 		if got := shortTeamName(name); got != want {
 			t.Errorf("shortTeamName(%q) = %q, want %q", name, got, want)
 		}
+	}
+}
+
+func TestFinishedSessionsSurviveARestartWhenCacheDirIsSet(t *testing.T) {
+	mock := newUpstreamMock(t)
+	dir := t.TempDir()
+	first := testApp(t, mock)
+	first.cache = newCache(dir)
+	request(t, newServer(first), "/f1/tyre_usage/")
+	request(t, newServer(first), "/f1/latest_session/")
+
+	mock.mu.Lock()
+	mock.locked = true
+	mock.mu.Unlock()
+
+	// A "restarted" instance: empty memory, same directory, upstream locked out.
+	restarted := testApp(t, mock)
+	restarted.cache = newCache(dir)
+	tyres := decode(t, request(t, newServer(restarted), "/f1/tyre_usage/"))
+	latest := decode(t, request(t, newServer(restarted), "/f1/latest_session/"))
+	if tyres["sessions"].(map[string]any)["fp1"] == nil || tyres["upstream_error"] != nil || len(latest["results"].([]any)) != 3 || latest["upstream_error"] != nil {
+		t.Fatalf("expected persisted data to survive: tyres=%#v latest=%#v", tyres, latest)
+	}
+
+	// Without a directory the same restart has nothing to show.
+	amnesiac := testApp(t, mock)
+	if got := decode(t, request(t, newServer(amnesiac), "/f1/tyre_usage/")); got["upstream_error"] == nil {
+		t.Fatalf("expected an upstream error without a cache dir: %#v", got)
 	}
 }

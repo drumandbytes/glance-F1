@@ -6,6 +6,11 @@ services:
       - TIMEZONE=America/Edmonton
       - TRACK_COLOUR=#e5d486
       - EVENT_DETAIL=main
+    volumes:
+      - paddock-cache:/data
     ports:
       - 4463:4463
     restart: unless-stopped
+
+volumes:
+  paddock-cache:
