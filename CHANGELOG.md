@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/drumandbytes/paddock-api/compare/v2.3.0...v2.4.0) (2026-09-24)
+
+
+### Features
+
+* durable cache so finished sessions survive restarts ([#44](https://github.com/drumandbytes/paddock-api/issues/44)) ([1247a12](https://github.com/drumandbytes/paddock-api/commit/1247a1219c5d1d2ad2e2a997c31b197d5198d1ee))
+
 ## [2.3.0](https://github.com/drumandbytes/paddock-api/compare/v2.2.2...v2.3.0) (2026-09-24)
 
 
