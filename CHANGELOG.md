@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/drumandbytes/paddock-api/compare/v2.1.2...v2.2.0) (2026-09-24)
+
+
+### Features
+
+* latest-session endpoint/widget, hand Next Race over when the race ends ([#33](https://github.com/drumandbytes/paddock-api/issues/33)) ([f362744](https://github.com/drumandbytes/paddock-api/commit/f3627444b2dc7a92fae1bfaef49dba4b80978166))
+
 ## [2.1.2](https://github.com/drumandbytes/paddock-api/compare/v2.1.1...v2.1.2) (2026-09-24)
 
 
