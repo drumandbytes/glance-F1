@@ -79,14 +79,14 @@ func (a *app) latestSession(c echo.Context) error {
 	// A finished session's classification never changes, so it's kept for
 	// good - OpenF1's free tier locks out all access while any session is live.
 	cacheKey := fmt.Sprintf("session_results:%d:%d:%s", year, r.Round, key)
-	if cached, ok := a.cache.get(cacheKey, now); ok {
+	if cached, ok := a.cache.getDurable(cacheKey, now); ok {
 		result["results"], ttl = cached, 5*time.Minute
 	} else if rows, ended, fetchErr := a.fetchSessionResults(key, at, now); fetchErr != nil {
 		result["upstream_error"] = fetchErr.Error()
 	} else {
 		result["results"], ttl = rows, 5*time.Minute
 		if ended && len(rows) > 0 {
-			a.cache.set(cacheKey, rows, now.Add(30*24*time.Hour))
+			a.keep(cacheKey, rows, now)
 		}
 	}
 	a.cache.set("f1:latest_session", result, now.Add(ttl))

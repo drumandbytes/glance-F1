@@ -110,6 +110,13 @@ func (a *app) fetchOpenF1(url string, target any) error {
 	return a.fetchJSON(url, target)
 }
 
+// keep stores data that never changes once it exists (see setDurable).
+func (a *app) keep(key string, value any, now time.Time) {
+	if err := a.cache.setDurable(key, value, now); err != nil {
+		a.log.Warn("could not persist cache entry", "key", key, "error", err)
+	}
+}
+
 func newServer(a *app) *echo.Echo {
 	e := echo.New()
 	e.HideBanner, e.HidePort = true, true
@@ -137,7 +144,12 @@ func main() {
 		logger.Error("invalid configuration", "error", err)
 		os.Exit(1)
 	}
-	a := &app{config: cfg, client: &http.Client{Timeout: 15 * time.Second}, cache: newCache(), now: time.Now, log: logger, openF1Gap: 400 * time.Millisecond}
+	a := &app{config: cfg, client: &http.Client{Timeout: 15 * time.Second}, cache: newCache(envOr("CACHE_DIR", "")), now: time.Now, log: logger, openF1Gap: 400 * time.Millisecond}
+	if a.cache.dir != "" {
+		if err := a.cache.probe(); err != nil {
+			logger.Warn("CACHE_DIR is not writable, finished-session data will not survive restarts", "dir", a.cache.dir, "error", err)
+		}
+	}
 	port := envOr("PORT", "4463")
 	logger.Info("server starting", "port", port)
 	if err := newServer(a).Start(":" + port); err != nil && !errors.Is(err, http.ErrServerClosed) {

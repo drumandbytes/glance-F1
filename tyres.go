@@ -66,7 +66,7 @@ func (a *app) tyreUsage(c echo.Context) error {
 		// sessions) while any session is live, which would otherwise blank
 		// data we already had.
 		sessionCacheKey := fmt.Sprintf("tyre_session:%d:%d:%s", year, selected.Round, key)
-		if cached, ok := a.cache.get(sessionCacheKey, now); ok {
+		if cached, ok := a.cache.getDurable(sessionCacheKey, now); ok {
 			sessions[key] = cached
 			continue
 		}
@@ -90,7 +90,7 @@ func (a *app) tyreUsage(c echo.Context) error {
 		}
 		sessions[key] = usage
 		if end, parseErr := time.Parse(time.RFC3339, match.End); parseErr == nil && end.Before(now) {
-			a.cache.set(sessionCacheKey, usage, now.Add(30*24*time.Hour))
+			a.keep(sessionCacheKey, usage, now)
 		}
 	}
 	result := map[string]any{"season": year, "round": selected.Round, "raceName": selected.RaceName, "sessions": sessions}
