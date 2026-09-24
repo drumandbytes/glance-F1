@@ -37,6 +37,7 @@ func (a *app) drivers(c echo.Context) error {
 					Standings []struct {
 						Position     json.Number                              `json:"position"`
 						Points       json.Number                              `json:"points"`
+						Wins         json.Number                              `json:"wins"`
 						Driver       struct{ FamilyName, Nationality string } `json:"Driver"`
 						Constructors []struct {
 							ID string `json:"constructorId"`
@@ -57,7 +58,7 @@ func (a *app) drivers(c echo.Context) error {
 				team = formatTeamName(standing.Constructors[0].ID)
 			}
 			country := normalizeNationality(standing.Driver.Nationality)
-			results = append(results, map[string]any{"surname": standing.Driver.FamilyName, "position": numberInt(standing.Position), "points": numberFloat(standing.Points), "teamId": team, "country": country, "flag": countryCodes[country]})
+			results = append(results, map[string]any{"surname": standing.Driver.FamilyName, "position": numberInt(standing.Position), "points": numberFloat(standing.Points), "wins": numberInt(standing.Wins), "teamId": team, "country": country, "flag": countryCodes[country]})
 		}
 	}
 	result := map[string]any{"season": year, "drivers": results}
@@ -94,7 +95,7 @@ func (a *app) constructors(c echo.Context) error {
 	if len(upstream.MRData.StandingsTable.Lists) > 0 {
 		for _, standing := range upstream.MRData.StandingsTable.Lists[0].Standings {
 			country := normalizeNationality(standing.Constructor.Nationality)
-			results = append(results, map[string]any{"team": standing.Constructor.Name, "position": numberInt(standing.Position), "points": numberFloat(standing.Points), "wins": numberInt(standing.Wins), "country": country, "flag": countryCodes[country], "wiki": standing.Constructor.URL})
+			results = append(results, map[string]any{"team": strings.TrimSuffix(standing.Constructor.Name, " F1 Team"), "position": numberInt(standing.Position), "points": numberFloat(standing.Points), "wins": numberInt(standing.Wins), "country": country, "flag": countryCodes[country], "wiki": standing.Constructor.URL})
 		}
 	}
 	result := map[string]any{"season": year, "constructors": results}
