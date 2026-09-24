@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.2](https://github.com/drumandbytes/paddock-api/compare/v2.2.1...v2.2.2) (2026-09-24)
+
+
+### Bug Fixes
+
+* **widgets:** readable HARD in light mode, explicit tyre stints ([#39](https://github.com/drumandbytes/paddock-api/issues/39)) ([cc9aa6f](https://github.com/drumandbytes/paddock-api/commit/cc9aa6f72808457a28457ae1e53c967645e18c3c))
+
 ## [2.2.1](https://github.com/drumandbytes/paddock-api/compare/v2.2.0...v2.2.1) (2026-09-24)
 
 
