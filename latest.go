@@ -96,7 +96,7 @@ func (a *app) latestSession(c echo.Context) error {
 
 func (a *app) fetchSessionResults(key string, at, now time.Time) ([]map[string]any, bool, error) {
 	var sessions []openF1Session
-	if err := a.fetchJSON(fmt.Sprintf("%s/sessions?year=%d", a.config.openF1Base, at.Year()), &sessions); err != nil {
+	if err := a.fetchOpenF1(fmt.Sprintf("%s/sessions?year=%d", a.config.openF1Base, at.Year()), &sessions); err != nil {
 		return nil, false, err
 	}
 	match := matchOpenF1Session(sessions, key, at)
@@ -113,7 +113,7 @@ func (a *app) fetchSessionResults(key string, at, now time.Time) ([]map[string]a
 		DNS          bool            `json:"dns"`
 		DSQ          bool            `json:"dsq"`
 	}
-	if err := a.fetchJSON(fmt.Sprintf("%s/session_result?session_key=%d", a.config.openF1Base, match.Key), &results); err != nil {
+	if err := a.fetchOpenF1(fmt.Sprintf("%s/session_result?session_key=%d", a.config.openF1Base, match.Key), &results); err != nil {
 		return nil, false, err
 	}
 	var drivers []struct {
@@ -122,7 +122,7 @@ func (a *app) fetchSessionResults(key string, at, now time.Time) ([]map[string]a
 		LastName string `json:"last_name"`
 		Team     string `json:"team_name"`
 	}
-	if err := a.fetchJSON(fmt.Sprintf("%s/drivers?session_key=%d", a.config.openF1Base, match.Key), &drivers); err != nil {
+	if err := a.fetchOpenF1(fmt.Sprintf("%s/drivers?session_key=%d", a.config.openF1Base, match.Key), &drivers); err != nil {
 		return nil, false, err
 	}
 	byNumber := make(map[int]int, len(drivers))
