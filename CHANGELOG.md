@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/drumandbytes/paddock-api/compare/v2.4.0...v2.5.0) (2026-09-25)
+
+
+### Features
+
+* latest session falls back to the last complete session during OpenF1 lockout ([#49](https://github.com/drumandbytes/paddock-api/issues/49)) ([ce892d7](https://github.com/drumandbytes/paddock-api/commit/ce892d783fa1afdb0e333716f95209692cb38832))
+
 ## [2.4.0](https://github.com/drumandbytes/paddock-api/compare/v2.3.0...v2.4.0) (2026-09-24)
 
 
