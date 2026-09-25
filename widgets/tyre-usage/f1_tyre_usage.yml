@@ -1,6 +1,6 @@
 - type: custom-api
   title: Tyre Usage
-  cache: 30m
+  cache: 5m
   url: http://${F1_API_URL}:4463/f1/tyre_usage/
   # Usage only, not allocation: there's no structured source anywhere for a
   # driver's pre-weekend tyre-compound allocation, so this only ever reports

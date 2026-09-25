@@ -4,10 +4,11 @@
   url: http://${F1_API_URL}:4463/f1/last_race/
   template: |
     <div class="flex flex-column gap-10">
+      {{ $rn := .JSON.String "raceName" }}
+      {{ $ru := .JSON.String "url" }}
       <p class="size-h5">
-        <a href="{{ .JSON.String "url" }}" target="_blank" rel="noreferrer">{{ .JSON.String "raceName" }}</a>
+        {{ if $ru }}<a href="{{ $ru }}" target="_blank" rel="noreferrer">{{ $rn }}</a>{{ else }}{{ $rn }}{{ end }}
       </p>
-      <p class="size-h6 color-base">{{ .JSON.String "date" }}</p>
       <ul class="list collapsible-container" data-collapse-after="5">
         {{ range $i, $v := .JSON.Array "results" }}
         <li class="flex items-center {{ if eq $i 0 }}color-primary{{ else if eq $i 1 }}color-highlight{{ end }}">
