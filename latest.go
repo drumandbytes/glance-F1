@@ -39,10 +39,15 @@ func matchOpenF1Session(sessions []openF1Session, key string, at time.Time) *ope
 	return match
 }
 
-func latestFinishedSession(races []race, now time.Time) (*race, string, time.Time) {
-	var found *race
-	var foundKey string
-	var foundAt time.Time
+type finishedSession struct {
+	race *race
+	key  string
+	at   time.Time
+}
+
+// finishedSessions lists the weekend's finished non-race sessions, newest first.
+func finishedSessions(races []race, now time.Time) []finishedSession {
+	var found []finishedSession
 	for i := range races {
 		for _, key := range sessionKeys {
 			if key == "race" {
@@ -52,12 +57,19 @@ func latestFinishedSession(races []race, now time.Time) (*race, string, time.Tim
 			if at.IsZero() || at.Add(sessionWindows[key]).After(now) {
 				continue
 			}
-			if foundAt.IsZero() || at.After(foundAt) {
-				found, foundKey, foundAt = &races[i], key, at
-			}
+			found = append(found, finishedSession{&races[i], key, at})
 		}
 	}
-	return found, foundKey, foundAt
+	sort.Slice(found, func(i, j int) bool { return found[i].at.After(found[j].at) })
+	return found
+}
+
+func sessionResultsKey(year int, s finishedSession) string {
+	return fmt.Sprintf("session_results:%d:%d:%s", year, s.race.Round, s.key)
+}
+
+func (a *app) sessionResponse(year int, s finishedSession, results any) map[string]any {
+	return map[string]any{"season": year, "round": s.race.Round, "raceName": s.race.RaceName, "url": s.race.URL, "session": sessionLabels[s.key], "key": s.key, "date": formatRFC3339(s.at.In(a.config.timezone)), "results": results}
 }
 
 func (a *app) latestSession(c echo.Context) error {
@@ -70,23 +82,37 @@ func (a *app) latestSession(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusOK, map[string]string{"error": "Exception while fetching: " + err.Error()})
 	}
-	r, key, at := latestFinishedSession(races, now)
-	if r == nil {
+	sessions := finishedSessions(races, now)
+	if len(sessions) == 0 {
 		return c.JSON(http.StatusOK, map[string]string{"message": "No completed session yet"})
 	}
-	result := map[string]any{"season": year, "round": r.Round, "raceName": r.RaceName, "url": r.URL, "session": sessionLabels[key], "key": key, "date": formatRFC3339(at.In(a.config.timezone)), "results": []any{}}
-	ttl := 2 * time.Minute
+	latest := sessions[0]
+	result := a.sessionResponse(year, latest, []any{})
+	ttl, have := 2*time.Minute, false
 	// A finished session's classification never changes, so it's kept for
 	// good - OpenF1's free tier locks out all access while any session is live.
-	cacheKey := fmt.Sprintf("session_results:%d:%d:%s", year, r.Round, key)
+	cacheKey := sessionResultsKey(year, latest)
 	if cached, ok := a.cache.getDurable(cacheKey, now); ok {
-		result["results"], ttl = cached, 5*time.Minute
-	} else if rows, ended, fetchErr := a.fetchSessionResults(key, at, now); fetchErr != nil {
+		result["results"], ttl, have = cached, 5*time.Minute, true
+	} else if rows, ended, fetchErr := a.fetchSessionResults(latest.key, latest.at, now); fetchErr != nil {
 		result["upstream_error"] = fetchErr.Error()
 	} else {
 		result["results"], ttl = rows, 5*time.Minute
-		if ended && len(rows) > 0 {
+		have = len(rows) > 0
+		if ended && have {
 			a.keep(cacheKey, rows, now)
+		}
+	}
+	if !have {
+		// Latest results aren't available yet (typically the lockout right after a
+		// session): show the newest earlier session we still hold, and say what's pending.
+		for _, s := range sessions[1:] {
+			if cached, ok := a.cache.getDurable(sessionResultsKey(year, s), now); ok {
+				fallback := a.sessionResponse(year, s, cached)
+				fallback["pending"] = result["session"]
+				result, ttl = fallback, 2*time.Minute
+				break
+			}
 		}
 	}
 	a.cache.set("f1:latest_session", result, now.Add(ttl))

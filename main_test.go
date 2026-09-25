@@ -304,3 +304,20 @@ func TestFinishedSessionsSurviveARestartWhenCacheDirIsSet(t *testing.T) {
 		t.Fatalf("expected an upstream error without a cache dir: %#v", got)
 	}
 }
+
+func TestLatestSessionFallsBackToLastCompleteSessionDuringLockout(t *testing.T) {
+	mock := newUpstreamMock(t)
+	a := testApp(t, mock)
+	server := newServer(a)
+	a.now = func() time.Time { return time.Date(2026, 3, 6, 15, 0, 0, 0, time.UTC) }
+	before := decode(t, request(t, server, "/f1/latest_session/"))
+	mock.mu.Lock()
+	mock.locked = true
+	mock.mu.Unlock()
+	// A later session has finished but OpenF1 is locked out: keep showing the cached one.
+	a.now = func() time.Time { return time.Date(2026, 3, 7, 17, 0, 0, 0, time.UTC) }
+	result := decode(t, request(t, server, "/f1/latest_session/"))
+	if result["pending"] == nil || result["session"] == result["pending"] || len(result["results"].([]any)) != 3 {
+		t.Fatalf("expected earlier cached session plus pending note (before=%v): %#v", before["session"], result)
+	}
+}
