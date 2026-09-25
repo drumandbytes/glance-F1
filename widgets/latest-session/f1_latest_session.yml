@@ -6,7 +6,8 @@
   # (practice, sprint qualifying, qualifying, sprint) - the Grand Prix itself
   # is Last Race Results' job. Practice/qualifying results only exist on
   # OpenF1, which locks out free access while any session is live, so a
-  # just-finished session can take a while to show up.
+  # just-finished session can take a while to show up - until it does, the
+  # previous session's results are shown with a note.
   template: |
     {{ $session := .JSON.String "session" }}
     {{ $rows := .JSON.Array "results" }}
@@ -15,6 +16,8 @@
     {{ else }}
     <div class="flex flex-column gap-10">
       <p class="size-h5">{{ $session }}</p>
+      {{ $pending := .JSON.String "pending" }}
+      {{ if $pending }}<p class="size-h6 color-negative">{{ $pending }} results not available yet - showing the last complete session.</p>{{ end }}
       <p class="size-h6 color-base">
         {{ $url := .JSON.String "url" }}
         {{ if $url }}<a href="{{ $url }}" target="_blank" rel="noreferrer">{{ .JSON.String "raceName" }}</a>{{ else }}{{ .JSON.String "raceName" }}{{ end }}
